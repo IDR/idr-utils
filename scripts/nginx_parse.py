@@ -17,9 +17,9 @@ from collections import defaultdict
 # https://coderwall.com/p/snn1ag/regex-to-parse-your-default-nginx-access-logs
 
 pattern = ""
-pattern += '(?P<ipaddress>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}) - - '
-pattern += '\[(?P<dateandtime>\d{2}\/[a-zA-Z]{3}\/'
-pattern += '\d{4}:\d{2}:\d{2}:\d{2} (\+|\-)\d{4})\] '
+pattern += r'(?P<ipaddress>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}) - - '
+pattern += r'\[(?P<dateandtime>\d{2}\/[a-zA-Z]{3}\/'
+pattern += r'\d{4}:\d{2}:\d{2}:\d{2} (\+|\-)\d{4})\] '
 pattern += '(.*?)'
 # pattern += '((\"(GET|POST) )(?P<url>.+)(http\/1\.1")) (?P<statuscode>\d{3}) '
 # pattern += '(?P<bytessent>\d+) (["](?P<refferer>(\-)|(.+))["]) (["]'
