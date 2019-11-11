@@ -1,3 +1,0 @@
-PyYAML
-pandas<0.19
-flake8

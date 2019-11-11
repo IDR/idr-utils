@@ -6,9 +6,7 @@ sudo: false
 
 cache: pip
 
-install:
-  - pip install -r requirements.txt
-  - pip install .
+install: pip install .
 
 before_script: flake8 -v .
 
