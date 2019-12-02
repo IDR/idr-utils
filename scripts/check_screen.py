@@ -9,6 +9,7 @@ If everything is OK, there is no output and the return value is zero.
 Otherwise, the return value is nonzero and you should see something on
 stderr.
 """
+from __future__ import print_function
 
 import sys
 import os
@@ -40,7 +41,7 @@ def main(argv):
     retval = 0
     args = parse_cl(argv)
     if args.verbose:
-        print "checking %r" % (args.screen,)
+        print("checking %r" % (args.screen,))
     with open(args.screen) as f:
         reader = ScreenReader(f)
     # ScreenReader raises an exception if the file is not well-formed
@@ -52,9 +53,9 @@ def main(argv):
             retval = 1
             if args.verbose:
                 sys.stderr.write("ERROR[%d|%d]: missing %r\n" % (i, j, fn))
-    print "files: %d%s" % (
+    print("files: %d%s" % (
         count + 1, " (missing: %d)" % missing if args.check_existence else ""
-    )
+    ))
     return retval
 
 

@@ -23,6 +23,7 @@ setup(
     classifiers=CLASSIFIERS,
     packages=["pyidr"],
     install_requires=[
+        "future",
         "PyYAML",
         "pandas<0.19",
         "flake8",

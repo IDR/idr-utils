@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 from sys import stderr
 from os.path import basename
 from os.path import exists
@@ -22,9 +23,9 @@ def main(output, inputs):
     with open(output, "a") as out:
         for line in get_lines():
             if line in existing:
-                print >>stderr, "Dupe: ", line
+                print("Dupe: ", line, file=stderr)
             else:
-                print >>out, line
+                print(line, file=out)
 
 
 if __name__ == "__main__":

@@ -4,10 +4,13 @@ Bio-Formats style file patterns.
 www.openmicroscopy.org/site/support/bio-formats5.1/formats/pattern-file.html
 """
 
+from builtins import map
+from builtins import range
+from builtins import object
 import re
 import string
 import difflib
-from itertools import product, izip_longest
+from itertools import product, zip_longest
 
 
 class InvertedRangeError(Exception):
@@ -24,7 +27,7 @@ def _expand_letter_range(start, stop, step):
     stop = letters.index(stop) + 1
     if stop <= start:
         raise InvertedRangeError
-    return [letters[_] for _ in xrange(start, stop, step)]
+    return [letters[_] for _ in range(start, stop, step)]
 
 
 def expand_range(r):
@@ -57,10 +60,10 @@ def expand_range(r):
             raise ValueError("inverted range: %s" % r)
         step = int(step)
         if len(start_str) != len(stop_str):
-            return map(str, range(start, stop, step))
+            return list(map(str, list(range(start, stop, step))))
         else:
             fmt = "%%0%dd" % len(start_str)
-            return [fmt % _ for _ in xrange(start, stop, step)]
+            return [fmt % _ for _ in range(start, stop, step)]
 
 
 def expand_block(block):
@@ -87,11 +90,11 @@ def find_pattern_2seq(s1, s2):
     sm = difflib.SequenceMatcher(None, s1, s2, False)
     blocks = sm.get_matching_blocks()
     pattern = [(sm.a[:blocks[0].a], sm.b[:blocks[0].b])]
-    for i in xrange(len(blocks) - 1):
+    for i in range(len(blocks) - 1):
         l, r = blocks[i], blocks[i+1]
         pattern.append(sm.a[l.a:l.a+l.size])
         pattern.append((sm.a[l.a+l.size:r.a], sm.b[l.b+l.size:r.b]))
-    for i in xrange(len(pattern) - 1, -1, -1):
+    for i in range(len(pattern) - 1, -1, -1):
         if isinstance(pattern[i], tuple):
             if set(pattern[i]) == {""}:
                 del pattern[i]
@@ -111,4 +114,4 @@ class FilePattern(object):
     def filenames(self):
         fixed = re.split(r"<.+?>", self.pattern)
         for repl in product(*(expand_block(_) for _ in self.blocks())):
-            yield "".join(sum(izip_longest(fixed, repl, fillvalue=""), ()))
+            yield "".join(sum(zip_longest(fixed, repl, fillvalue=""), ()))

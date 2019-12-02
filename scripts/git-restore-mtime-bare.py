@@ -66,7 +66,7 @@ for line in gitobj.stdout:
 
     # Date line
     else:
-        mtime = long(line)
+        mtime = int(line)
 
     # All files done?
     if not filelist:

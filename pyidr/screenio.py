@@ -1,5 +1,9 @@
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import object
 import string
-import ConfigParser
+import configparser
 import abc
 
 
@@ -46,7 +50,7 @@ class ScreenWriter(ScreenIO):
         self.reset()
 
     def reset(self):
-        self.cp = ConfigParser.ConfigParser()
+        self.cp = configparser.ConfigParser()
         self.cp.optionxform = str  # case-sensitive option names
         self.__add_plate_entry()
         self.__well_count = 0
@@ -90,7 +94,7 @@ class ScreenWriter(ScreenIO):
         self.cp.add_section(sec)
         self.cp.set(sec, "Row", "%d" % i)
         self.cp.set(sec, "Column", "%d" % j)
-        for k, v in extra_kv.iteritems():
+        for k, v in extra_kv.items():
             self.cp.set(sec, k, v)
         for f, v in enumerate(field_values):
             if v:
@@ -106,7 +110,7 @@ class ScreenReader(ScreenIO):
     def __init__(self, f):
         super(ScreenReader, self).__init__()
         self.__f = f
-        self.cp = ConfigParser.ConfigParser()
+        self.cp = configparser.ConfigParser()
         self.cp.optionxform = str
         self.wells = []
         self.__read()
@@ -123,7 +127,7 @@ class ScreenReader(ScreenIO):
         getter = getattr(self.cp, getter_name)
         try:
             return getter(sec, opt)
-        except ConfigParser.NoOptionError:
+        except configparser.NoOptionError:
             raise ScreenError("Required %r option missing in %r" % (opt, sec))
 
     def get(self, sec, opt):
@@ -138,7 +142,7 @@ class ScreenReader(ScreenIO):
     def __read(self):
         self.cp.readfp(self.__f)
         self.__read_plate()
-        for idx in xrange(self.rows * self.columns):
+        for idx in range(self.rows * self.columns):
             self.__read_well(idx)
 
     def __read_plate(self):
@@ -164,7 +168,7 @@ class ScreenReader(ScreenIO):
             )
         w = dict(self.cp.items(sec))
         fields = []
-        for i in xrange(self.fields):
+        for i in range(self.fields):
             field_key = "Field_%d" % i
             try:
                 fields.append(self.get(sec, field_key))

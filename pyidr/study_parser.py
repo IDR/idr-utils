@@ -1,5 +1,10 @@
 #! /usr/bin/env python
 
+from __future__ import print_function
+from builtins import str
+from builtins import zip
+from builtins import range
+from builtins import object
 from argparse import ArgumentParser
 import glob
 import json
@@ -88,7 +93,7 @@ class StudyError(Exception):
     pass
 
 
-class StudyParser():
+class StudyParser(object):
 
     def __init__(self, study_file):
         self._study_file = study_file
@@ -381,7 +386,7 @@ class Formatter(object):
                     value = formatter % d
                     for v in value.split('\t'):
                         s.append({'%s' % key: v})
-                except KeyError, e:
+                except KeyError as e:
                     self.log.debug("Missing %s" % e.message)
 
         s = []
@@ -434,7 +439,7 @@ class Formatter(object):
                 self.log.info("Deleting client map annotation")
                 ann._conn.deleteObjects('Annotation', [ann.id])
 
-        expected_pairs = [(k, v) for i in d["map"] for k, v in i.iteritems()]
+        expected_pairs = [(k, v) for i in d["map"] for k, v in i.items()]
         status = self.check_annotation(
             obj, expected_pairs, STUDY_NS, update=update)
         return status
@@ -574,12 +579,12 @@ def main(argv):
                     else:
                         log.warn("Unknown key: %s", key)
         if unknown:
-            print "Found %s unknown keys:" % len(unknown)
+            print("Found %s unknown keys:" % len(unknown))
             raise Exception("\n".join(unknown))
         d = Formatter(p, inspect=args.inspect)
 
         if args.report:
-            print str(d)
+            print(str(d))
 
         if args.check or args.set:
             d.check(update=args.set)

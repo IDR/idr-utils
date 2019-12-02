@@ -5,6 +5,7 @@
 #
 #   ./get_failed.py < taskids.txt
 
+from __future__ import print_function
 import celery.result
 import sys
 
@@ -22,8 +23,8 @@ for line in sys.stdin:
             fail[taskid] = r
 
 print('SUMMARY')
-for k, v in st.items():
+for k, v in list(st.items()):
     print('  {}: {}'.format(k, v))
 print('\nFAILURES')
-for k, v in fail.items():
+for k, v in list(fail.items()):
     print('  {}: {}'.format(k, v.info))
