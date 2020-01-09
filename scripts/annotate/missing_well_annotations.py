@@ -52,4 +52,3 @@ for pl in screen.listChildren():
         for well in pl.listChildren():
             if len(list(well.listAnnotations())) == 0:
                 print("%s,%s,%s" % (pl.name, well.row, well.column))
-
