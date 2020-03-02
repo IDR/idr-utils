@@ -576,7 +576,7 @@ def main(argv):
                     if args.strict:
                         unknown.append(key)
                     else:
-                        log.warn("Unknown key: %s", key)
+                        log.warning("Unknown key: %s", key)
         if unknown:
             print("Found %s unknown keys:" % len(unknown))
             raise Exception("\n".join(unknown))
