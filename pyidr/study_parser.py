@@ -553,6 +553,9 @@ def main(argv):
     parser.add_argument(
         '--verbose', '-v', action='count', default=0,
         help='Increase the command verbosity')
+    parser.add_argument(
+        '--quiet', '-q', action='count', default=0,
+        help='Decrease the command verbosity')
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--check", action="store_true",
                        help="Check the study annotations on IDR")
@@ -560,7 +563,8 @@ def main(argv):
                        help="Set the study annotations on IDR")
     args = parser.parse_args(argv)
 
-    logging.basicConfig(level=logging.WARN - 10 * args.verbose)
+    logging.basicConfig(
+        level=logging.WARN - 10 * args.verbose + 10 * args.quiet)
     log = logging.getLogger("pyidr.study_parser")
 
     for s in args.studyfile:
