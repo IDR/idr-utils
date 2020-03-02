@@ -368,7 +368,7 @@ class Formatter(object):
         else:
             key = "Study Description"
         component_title = (
-            "%s\n%s" % (key, component[key])).decode('string_escape')
+            "%s\n%s" % (key, component[key]))
         if "Study Version History" in component:
             history = ("\n\nVersion History\n%s" %
                        component["Study Version History"])
@@ -387,7 +387,7 @@ class Formatter(object):
                     for v in value.split('\t'):
                         s.append({'%s' % key: v})
                 except KeyError as e:
-                    self.log.debug("Missing %s" % e.message)
+                    self.log.debug("Missing %s" % str(e))
 
         s = []
         if component.get("Type", None) == "Experiment":
