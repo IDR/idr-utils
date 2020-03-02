@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from builtins import str
-from builtins import input
 from builtins import map
 from collections import defaultdict
 from fileinput import input

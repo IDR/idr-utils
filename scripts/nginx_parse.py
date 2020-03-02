@@ -8,7 +8,6 @@
 # On stderr, monthly totals will be output after each month. At the
 # end, global stats will be printed.
 
-from builtins import input
 from sys import stderr
 from fileinput import input
 from re import compile
