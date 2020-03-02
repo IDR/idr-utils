@@ -1,5 +1,5 @@
-from future import standard_library
-standard_library.install_aliases()
+#!/usr/bin/env python
+
 from builtins import range
 from builtins import object
 import string

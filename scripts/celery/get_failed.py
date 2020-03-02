@@ -5,7 +5,6 @@
 #
 #   ./get_failed.py < taskids.txt
 
-from __future__ import print_function
 import celery.result
 import sys
 

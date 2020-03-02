@@ -20,7 +20,6 @@ containing a list of (subdir, file) pairs as whitespace-separated
 basenames, e.g., "plate1\tplate1_0.avro". Tasks will be submitted only
 for the specified pairs.
 """
-from __future__ import print_function
 
 from builtins import str
 import sys

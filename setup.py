@@ -22,6 +22,7 @@ setup(
     version="0.1.dev",
     classifiers=CLASSIFIERS,
     packages=["pyidr"],
+    python_requires='>=3',
     install_requires=[
         "future",
         "PyYAML",

@@ -9,7 +9,6 @@ If everything is OK, there is no output and the return value is zero.
 Otherwise, the return value is nonzero and you should see something on
 stderr.
 """
-from __future__ import print_function
 
 import sys
 import os

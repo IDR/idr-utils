@@ -6,7 +6,6 @@ Recursively checks YAML and CSV files for validity
 YAML docs should contain a single document
 CSVs should have unique column names and be loadable with pandas
 """
-from __future__ import print_function
 
 import os
 import pandas
