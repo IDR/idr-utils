@@ -19,7 +19,7 @@ setup(
     name=NAME,
     description=DESCRIPTION,
     url=URL,
-    version="0.1.dev",
+    version="0.2.dev1",
     classifiers=CLASSIFIERS,
     packages=["pyidr"],
     python_requires='>=3',
