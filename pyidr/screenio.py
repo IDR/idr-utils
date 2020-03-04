@@ -46,7 +46,7 @@ class ScreenWriter(ScreenIO):
         self.fields = int(fields)
         self.screen_name = screen_name
         self.exclude_readers = exclude_readers
-        self.alpha_map = dict(enumerate(string.uppercase))
+        self.alpha_map = dict(enumerate(string.ascii_uppercase))
         self.reset()
 
     def reset(self):
