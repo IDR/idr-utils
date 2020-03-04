@@ -22,7 +22,8 @@ def _expand_letter_range(start, stop, step):
         raise ValueError("non-literal range: %s-%s" % (start, stop))
     if (start.isupper() != stop.isupper()):
         raise ValueError("mixed case range: %s-%s" % (start, stop))
-    letters = string.ascii_uppercase if start.isupper() else string.ascii_lowercase
+    letters = (
+        string.ascii_uppercase if start.isupper() else string.ascii_lowercase)
     start = letters.index(start)
     stop = letters.index(stop) + 1
     if stop <= start:
