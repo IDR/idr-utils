@@ -23,6 +23,8 @@ a01 to p24 and FIELD_TAG ranges from s1 to s6:
   cdp2bioactives_p24_s6_w2a2bb6fea-13ae-4645-ae08-ef64ae92c281.tif
 """
 
+from builtins import zip
+from builtins import range
 import sys
 import os
 import re
@@ -54,7 +56,7 @@ def get_channel_map(data_dir):
             continue
         plate_tag, channel_tag = subd.strip().split("-")
         channel_map.setdefault(plate_tag, []).append(channel_tag)
-    for v in channel_map.itervalues():
+    for v in channel_map.values():
         v.sort()
     return channel_map
 
@@ -94,7 +96,7 @@ def get_file_map(subd):
             continue
         field_idx = int(m.groups()[0])
         file_map.setdefault(well_tag, []).append((field_idx, fn))
-    for k, v in file_map.iteritems():
+    for k, v in file_map.items():
         v.sort()
         last_field_indices.append(v[-1][0])
         file_map[k] = [_[1] for _ in v]
@@ -117,7 +119,7 @@ def write_screen(data_dir, plate, outf, screen=None):
     n_fields = max(n_fields)
     base_path = os.path.join(data_dir, "%s-" % plate)
     writer = ScreenWriter(plate, ROWS, COLUMNS, n_fields, **kwargs)
-    for idx in xrange(ROWS * COLUMNS):
+    for idx in range(ROWS * COLUMNS):
         well_tag = "%s%02d" % writer.coordinates(idx)
         if not any(well_tag in file_maps[_] for _ in channel_tags):
             sys.stderr.write(
@@ -126,7 +128,7 @@ def write_screen(data_dir, plate, outf, screen=None):
             writer.add_well([])
             continue
         field_values = []
-        for i in xrange(n_fields):
+        for i in range(n_fields):
             try:
                 fnames = [file_maps[_][well_tag][i] for _ in channel_tags]
             except IndexError:

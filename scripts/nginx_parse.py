@@ -38,15 +38,15 @@ def print_month(month, per_month):
     ips, hits = tuple(per_month)
     if ips or hits:
         msg = "%s Month totals: IPs=%s Hits=%s" % (month, len(ips), hits)
-        print >>stderr, msg
+        print(msg, file=stderr)
 
 
 data = defaultdict(lambda: defaultdict(int))
-for line in input():
+for line in eval(input()):
     line = line.strip()
     m = pattern.match(line)
     if not m:
-        print "skipping", line
+        print(("skipping", line))
         continue
     g = m.groups()
     d = dt_parse(g[1])
@@ -67,7 +67,7 @@ for k, v in sorted(data.items()):
         total_ips.add(ip)
         per_month[1] += count
         per_month[0].add(ip)
-        print k, ip, count
+        print((k, ip, count))
 print_month(k, per_month)  # Leftovers
-print >>stderr, "Total hits:", total_hits
-print >>stderr, "Unique IPs:", len(total_ips)
+print("Total hits:", total_hits, file=stderr)
+print("Unique IPs:", len(total_ips), file=stderr)

@@ -6,7 +6,7 @@ import os
 
 
 def printusage():
-    print ('''
+    print('''
 Checks for Images which have been imported but don't have any annotations.
 Will skip Datasets which are not mentioned in the annotation.csv.
 

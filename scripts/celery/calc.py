@@ -21,6 +21,7 @@ basenames, e.g., "plate1\tplate1_0.avro". Tasks will be submitted only
 for the specified pairs.
 """
 
+from builtins import str
 import sys
 import os
 import argparse
@@ -130,7 +131,7 @@ def main(argv):
             celery_args = get_celery_args(args, calc_opts, subdir_bn, avro_bn)
 
             if args.dry_run:
-                print celery_args
+                print(celery_args)
             else:
                 r = celery.send_task('tasks.run_docker', kwargs=celery_args)
                 fo.write(str(r) + "\n")

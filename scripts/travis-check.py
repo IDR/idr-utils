@@ -27,12 +27,12 @@ for root, dirs, files in os.walk(REPO_ROOT):
             continue
 
         if fn.lower().endswith('.yml') or fn.lower().endswith('.yaml'):
-            print fn
+            print(fn)
             docs = list(yaml.load_all(f))
             assert len(docs) == 1
 
         if fn.lower().endswith('.csv'):
-            print fn
+            print(fn)
             # pandas is way too tolerant of extra columns- they may be treated
             # as a single or multi row index, or discarded. Since we don't
             # use index columns the following seems to be the best way of

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from builtins import str
+from builtins import map
 from collections import defaultdict
 from fileinput import input
 from fileinput import hook_compressed
@@ -97,7 +99,7 @@ def studies():
 
                 if not exists(p) and exists("%s.gz" % p):
                     p = "%s.gz" % p
-                for line in input([p], openhook=hook_compressed):
+                for line in eval(input([p], openhook=hook_compressed)):
                     parts = line.strip().split("\t")
                     if name_idx:
                         name = parts[name_idx]
@@ -125,14 +127,14 @@ def orphans(query):
         "where ws = null "
         "order by f.id"), None))
     for orphan in orphans:
-        print "Fileset:%s" % (orphan[0])
-    print >>stderr, "Total:", len(orphans)
+        print("Fileset:%s" % (orphan[0]))
+    print("Total:", len(orphans), file=stderr)
 
 
 def unknown(query):
     on_disk = []
     for study, screens in sorted(studies().items()):
-        for screen, plates in screens.items():
+        for screen, plates in list(screens.items()):
             on_disk.append(screen)
             on_disk.extend(plates)
 
@@ -140,24 +142,24 @@ def unknown(query):
         "select s.name, s.id from Screen s"), None))
     for name, id in on_server:
         if name not in on_disk:
-            print "Screen:%s" % id, name
+            print("Screen:%s" % id, name)
 
     on_server = unwrap(query.projection((
         "select s.name, p.name, p.id from Plate p "
         "join p.screenLinks as sl join sl.parent as s"), None))
     for screen, name, id in on_server:
         if name not in on_disk:
-            print "Plate:%s" % id, name, screen
+            print("Plate:%s" % id, name, screen)
 
 
 def check_search(query, search):
     obj_types = ('Screen', 'Plate', 'Image')
-    print "loading all map annotations"
+    print("loading all map annotations")
     res = query.findAllByQuery("from MapAnnotation m", None)
     all_values = set(
-        v for m in res for k, v in m.getMapValueAsMap().iteritems()
+        v for m in res for k, v in m.getMapValueAsMap().items()
     )
-    print "searching for all unique values [%d]" % len(all_values)
+    print("searching for all unique values [%d]" % len(all_values))
     with open("no_matches.txt", "w") as fo:
         for v in all_values:
             try:
@@ -195,7 +197,7 @@ def stat_screens(query):
                 expected = set_expected["Dataset"]
                 rv = unwrap(query.projection(PDI_QUERY, params))
             else:
-                raise Exception("unknown: %s" % set_expected.keys())
+                raise Exception("unknown: %s" % list(set_expected.keys()))
 
             if not rv:
                 tb.row(container, "MISSING", "", "", "", "", "")
@@ -217,7 +219,7 @@ def stat_screens(query):
                            filesizeformat(bytes))
     tb.row("Total", "", plate_count, well_count, image_count, plane_count,
            filesizeformat(byte_count))
-    print str(tb.build())
+    print(str(tb.build()))
 
 
 def stat_plates(query, screen, images=False):
@@ -243,7 +245,7 @@ def stat_plates(query, screen, images=False):
         count = unwrap(query.projection(
             q % "count(distinct i.id)", params
         ))[0][0]
-        print >>stderr, count
+        print(count, file=stderr)
         params.page(0, limit)
 
         q = q % "distinct i.id"
@@ -258,7 +260,7 @@ def stat_plates(query, screen, images=False):
         return
 
     plates = glob(join(screen, "plates", "*"))
-    plates = map(basename, plates)
+    plates = list(map(basename, plates))
 
     tb = TableBuilder("Plate")
     tb.cols(["PID", "Wells", "Images"])
@@ -285,12 +287,12 @@ def stat_plates(query, screen, images=False):
                 image_count += images
                 tb.row(plate, plate_id, wells, images)
     tb.row("Total", "", well_count, image_count)
-    print str(tb.build())
+    print(str(tb.build()))
 
 
 def copy(client, copy_from, copy_type, copy_to):
     gateway = BlitzGateway(client_obj=client)
-    print gateway.applySettingsToSet(copy_from, copy_type, [copy_to])
+    print(gateway.applySettingsToSet(copy_from, copy_type, [copy_to]))
     gateway.getObject("Image", copy_to).getThumbnail(size=(96,), direct=False)
 
 
@@ -301,9 +303,9 @@ def main():
     parser.add_argument("--unknown", action="store_true")
     parser.add_argument("--search", action="store_true")
     parser.add_argument("--images", action="store_true")
-    parser.add_argument("--copy-from", type=long, default=None)
+    parser.add_argument("--copy-from", type=int, default=None)
     parser.add_argument("--copy-type", default="Image")
-    parser.add_argument("--copy-to", type=long, default=None)
+    parser.add_argument("--copy-to", type=int, default=None)
     parser.add_argument("screen", nargs="?")
     ns = parser.parse_args()
 
@@ -326,7 +328,7 @@ def main():
                 copy(client, ns.copy_from, ns.copy_type, ns.copy_to)
             else:
                 for x in stat_plates(query, ns.screen, ns.images):
-                    print x
+                    print(x)
     finally:
         cli.close()
 

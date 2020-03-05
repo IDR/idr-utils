@@ -1,7 +1,11 @@
+#!/usr/bin/env python
+
+from builtins import str
+from builtins import range
 import os
 import unittest
-from cStringIO import StringIO
-import ConfigParser
+from io import StringIO
+import configparser
 
 from pyidr.screenio import ScreenWriter, ScreenReader, ScreenError
 
@@ -16,7 +20,7 @@ class TestScreenIO(unittest.TestCase):
 
     def _field_values(self, idx):
         values = [
-            "%s_%d_%d.fake" % (self.name, idx, _) for _ in xrange(self.fields)
+            "%s_%d_%d.fake" % (self.name, idx, _) for _ in range(self.fields)
         ]
         self.all_field_values.append(values)
         return values
@@ -36,17 +40,17 @@ class TestScreenWriter(TestScreenIO):
         writer = ScreenWriter(
             self.name, self.rows, self.columns, self.fields, **kwargs
         )
-        for i in xrange(self.size):
+        for i in range(self.size):
             writer.add_well(self._field_values(i), extra_kv=self.extra_kv)
         writer.write(fout)
         fout.seek(0)
-        self.cp = ConfigParser.ConfigParser()
+        self.cp = configparser.ConfigParser()
         self.cp.readfp(fout)
 
     def test_sections(self):
         self.assertEqual(
             self.cp.sections(),
-            ['Plate'] + ['Well %d' % _ for _ in xrange(self.size)]
+            ['Plate'] + ['Well %d' % _ for _ in range(self.size)]
         )
 
     def test_plate(self):
@@ -67,24 +71,24 @@ class TestScreenWriter(TestScreenIO):
             self.assertEqual(self.cp.get(sec, "ScreenName"), self.screen_name)
         else:
             self.assertRaises(
-                ConfigParser.NoOptionError, self.cp.get, sec, "ScreenName"
+                configparser.NoOptionError, self.cp.get, sec, "ScreenName"
             )
 
     def test_wells(self):
-        for i in xrange(self.rows):
-            for j in xrange(self.columns):
+        for i in range(self.rows):
+            for j in range(self.columns):
                 idx = i * self.columns + j
                 sec = 'Well %d' % idx
                 self.assertTrue(self.cp.has_section(sec))
                 for k, v in [("Row", i), ("Column", j)]:
                     self.assertTrue(self.cp.has_option(sec, k))
                     self.assertEqual(self.cp.get(sec, k), str(v))
-                for f in xrange(self.fields):
+                for f in range(self.fields):
                     k = 'Field_%d' % f
                     self.assertTrue(self.cp.has_option(sec, k))
                     self.assertEqual(self.cp.get(sec, k),
                                      self.all_field_values[idx][f])
-                    for ek, ev in self.extra_kv.iteritems():
+                    for ek, ev in self.extra_kv.items():
                         self.assertTrue(self.cp.has_option(sec, ek))
                         self.assertEqual(self.cp.get(sec, ek), ev)
 
@@ -109,8 +113,8 @@ class TestScreenReader(TestScreenIO):
         if screen_name:
             self.conf_lines.append("ScreenName = %s" % screen_name)
         self.conf_lines.append("")
-        for i in xrange(self.rows):
-            for j in xrange(self.columns):
+        for i in range(self.rows):
+            for j in range(self.columns):
                 idx = (i * self.columns + j)
                 self.conf_lines.extend([
                     "[Well %d]" % idx,
@@ -143,7 +147,7 @@ class TestScreenReaderName(TestScreenReader):
 class TestScreenReaderBad(unittest.TestCase):
 
     def test_bad_conf(self):
-        self.assertRaises(ConfigParser.Error, ScreenReader, StringIO("foo"))
+        self.assertRaises(configparser.Error, ScreenReader, StringIO("foo"))
 
     def test_missing_sections(self):
         missing_well = os.linesep.join([
@@ -165,7 +169,7 @@ class TestScreenReaderBad(unittest.TestCase):
             "Columns = 0",
             "Fields = 0",
         ]
-        for i in xrange(1, len(conf_lines)):
+        for i in range(1, len(conf_lines)):
             copy = conf_lines[:]
             del copy[i]
             bad_f = StringIO(os.linesep.join(copy))
@@ -179,7 +183,7 @@ class TestScreenReaderBad(unittest.TestCase):
             "Columns = 0",
             "Fields = 0",
         ]
-        for i in xrange(2, len(conf_lines)):
+        for i in range(2, len(conf_lines)):
             copy = conf_lines[:]
             copy[i] = copy[i].replace("0", "0.5")
             bad_f = StringIO(os.linesep.join(copy))

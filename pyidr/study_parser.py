@@ -1,5 +1,9 @@
 #! /usr/bin/env python
 
+from builtins import str
+from builtins import zip
+from builtins import range
+from builtins import object
 from argparse import ArgumentParser
 import glob
 import json
@@ -88,7 +92,7 @@ class StudyError(Exception):
     pass
 
 
-class StudyParser():
+class StudyParser(object):
 
     def __init__(self, study_file):
         self._study_file = study_file
@@ -363,7 +367,7 @@ class Formatter(object):
         else:
             key = "Study Description"
         component_title = (
-            "%s\n%s" % (key, component[key])).decode('string_escape')
+            "%s\n%s" % (key, component[key]))
         if "Study Version History" in component:
             history = ("\n\nVersion History\n%s" %
                        component["Study Version History"])
@@ -381,8 +385,8 @@ class Formatter(object):
                     value = formatter % d
                     for v in value.split('\t'):
                         s.append({'%s' % key: v})
-                except KeyError, e:
-                    self.log.debug("Missing %s" % e.message)
+                except KeyError as e:
+                    self.log.debug("Missing %s" % str(e))
 
         s = []
         if component.get("Type", None) == "Experiment":
@@ -434,7 +438,7 @@ class Formatter(object):
                 self.log.info("Deleting client map annotation")
                 ann._conn.deleteObjects('Annotation', [ann.id])
 
-        expected_pairs = [(k, v) for i in d["map"] for k, v in i.iteritems()]
+        expected_pairs = [(k, v) for i in d["map"] for k, v in i.items()]
         status = self.check_annotation(
             obj, expected_pairs, STUDY_NS, update=update)
         return status
@@ -549,6 +553,9 @@ def main(argv):
     parser.add_argument(
         '--verbose', '-v', action='count', default=0,
         help='Increase the command verbosity')
+    parser.add_argument(
+        '--quiet', '-q', action='count', default=0,
+        help='Decrease the command verbosity')
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--check", action="store_true",
                        help="Check the study annotations on IDR")
@@ -556,7 +563,8 @@ def main(argv):
                        help="Set the study annotations on IDR")
     args = parser.parse_args(argv)
 
-    logging.basicConfig(level=logging.WARN - 10 * args.verbose)
+    logging.basicConfig(
+        level=logging.WARN - 10 * args.verbose + 10 * args.quiet)
     log = logging.getLogger("pyidr.study_parser")
 
     for s in args.studyfile:
@@ -572,14 +580,14 @@ def main(argv):
                     if args.strict:
                         unknown.append(key)
                     else:
-                        log.warn("Unknown key: %s", key)
+                        log.warning("Unknown key: %s", key)
         if unknown:
-            print "Found %s unknown keys:" % len(unknown)
+            print("Found %s unknown keys:" % len(unknown))
             raise Exception("\n".join(unknown))
         d = Formatter(p, inspect=args.inspect)
 
         if args.report:
-            print str(d)
+            print(str(d))
 
         if args.check or args.set:
             d.check(update=args.set)
