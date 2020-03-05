@@ -4,7 +4,6 @@ Bio-Formats style file patterns.
 www.openmicroscopy.org/site/support/bio-formats5.1/formats/pattern-file.html
 """
 
-from builtins import map
 from builtins import range
 from builtins import object
 import re
