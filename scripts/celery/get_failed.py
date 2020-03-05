@@ -22,8 +22,8 @@ for line in sys.stdin:
             fail[taskid] = r
 
 print('SUMMARY')
-for k, v in list(st.items()):
+for k, v in st.items():
     print('  {}: {}'.format(k, v))
 print('\nFAILURES')
-for k, v in list(fail.items()):
+for k, v in fail.items():
     print('  {}: {}'.format(k, v.info))

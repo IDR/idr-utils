@@ -61,7 +61,7 @@ def expand_range(r):
             raise ValueError("inverted range: %s" % r)
         step = int(step)
         if len(start_str) != len(stop_str):
-            return list(map(str, list(range(start, stop, step))))
+            return [str(x) for x in range(start, stop, step)]
         else:
             fmt = "%%0%dd" % len(start_str)
             return [fmt % _ for _ in range(start, stop, step)]
