@@ -40,6 +40,7 @@ KEYS = (
     # OPTIONAL_KEYS["Study"]
     Key('Study Version History', 'Study', optional=True),
     Key('Study BioStudies Accession', 'Study', optional=True),
+    Key('Study EMPIAR Accession', 'Study', optional=True),
     Key('Study Publication Preprint', 'Study', optional=True),
     Key('Study PubMed ID', 'Study', optional=True),
     Key('Study PMC ID', 'Study', optional=True),
@@ -314,6 +315,9 @@ class Formatter(object):
         ('BioStudies Accession', "%(Study BioStudies Accession)s"
          " https://www.ebi.ac.uk/biostudies/studies/"
          "%(Study BioStudies Accession)s"),
+        ('EMPIAR Accession', "EMPIAR-%(Study EMPIAR Accession)s"
+         " https://www.ebi.ac.uk/pdbe/emdb/empiar/entry/"
+         "%(Study EMPIAR Accession)s"),
     ]
     ANNOTATION_PAIRS = [('Annotation File', "%(Annotation File)s")]
 
