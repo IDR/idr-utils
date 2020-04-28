@@ -251,7 +251,8 @@ class StudyParser(object):
 
         self.study["Publications"] = publications
 
-    def parse_data_doi(self, d, key):
+    @staticmethod
+    def parse_data_doi(d, key):
         if key not in d:
             return {}
         m = DOI_PATTERN.match(d[key])
