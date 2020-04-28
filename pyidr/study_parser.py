@@ -83,7 +83,8 @@ KEYS = (
     Key('Screen Technology Type', 'Screen', optional=True),
 )
 
-DOI_PATTERN = re.compile(r"https?://(dx.)?doi.org/(?P<id>\b10\.\d+/\S+\b)")
+DOI_PATTERN = re.compile(
+    r"(?P<url>https?://(dx.)?doi.org/)?(?P<id>\b10\.\d+/\S+\b)")
 STUDY_NS = "idr.openmicroscopy.org/study/info"
 COMPONENTS_NS = "idr.openmicroscopy.org/study/components"
 

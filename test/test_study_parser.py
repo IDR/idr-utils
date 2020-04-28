@@ -21,7 +21,7 @@ class TestDOI(object):
         'https://dx.doi.org/10.17867/10000134',
         'http://doi.org/10.17867/10000134',
         'http://dx.doi.org/10.17867/10000134'))
-    def test_valid_doi_link(self, doi):
+    def test_doi_url_prefixes(self, doi):
         d = {'Study DOI': doi}
         assert StudyParser.parse_data_doi(d, 'Study DOI') == {
             'Data DOI': '10.17867/10000134'}
@@ -32,12 +32,13 @@ class TestDOI(object):
             StudyParser.parse_data_doi(d, 'Study DOI')
 
     @pytest.mark.parametrize('doi', VALID_DOIS)
-    def test_valid_dois(self, doi):
+    def test_valid_doi_names(self, doi):
         d = {'Study DOI': 'https://doi.org/%s' % doi}
         assert StudyParser.parse_data_doi(d, 'Study DOI') == {
             'Data DOI': doi}
 
-    def test_doi_name(self):
-        d = {'Study DOI': '10.17867/10000134'}
-        with pytest.raises(Exception):
-            StudyParser.parse_data_doi(d, 'Study DOI')
+    @pytest.mark.parametrize('doi', VALID_DOIS)
+    def test_valid_doi_urls(self, doi):
+        d = {'Study DOI': doi}
+        assert StudyParser.parse_data_doi(d, 'Study DOI') == {
+            'Data DOI': doi}
