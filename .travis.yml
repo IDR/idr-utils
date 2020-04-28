@@ -1,11 +1,12 @@
 ---
+os: linux
+dist: xenial
 language: python
-sudo: false
-
+python: "3.6"
 cache: pip
 
 install: pip install .
 
 before_script: flake8 -v .
 
-script: python test/all_tests.py
+script: pytest
