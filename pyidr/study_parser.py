@@ -315,9 +315,8 @@ class Formatter(object):
         ('BioStudies Accession', "%(Study BioStudies Accession)s"
          " https://www.ebi.ac.uk/biostudies/studies/"
          "%(Study BioStudies Accession)s"),
-        ('EMPIAR Accession', "EMPIAR-%(Study EMPIAR Accession)s"
-         " https://www.ebi.ac.uk/pdbe/emdb/empiar/entry/"
-         "%(Study EMPIAR Accession)s"),
+        ('EMPIAR Accession', "%(Study EMPIAR Accession)s"
+         " https://dx.doi.org/10.6019/%(Study EMPIAR Accession)s"),
     ]
     ANNOTATION_PAIRS = [('Annotation File', "%(Annotation File)s")]
 
