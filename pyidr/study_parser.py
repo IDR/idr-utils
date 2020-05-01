@@ -83,7 +83,8 @@ KEYS = (
     Key('Screen Technology Type', 'Screen', optional=True),
 )
 
-DOI_PATTERN = re.compile("https?://(dx.)?doi.org/(?P<id>.*)")
+DOI_PATTERN = re.compile(
+    r"(?P<url>https?://(dx.)?doi.org/)?(?P<id>\b10\.\d+/\S+\b)")
 STUDY_NS = "idr.openmicroscopy.org/study/info"
 COMPONENTS_NS = "idr.openmicroscopy.org/study/components"
 
@@ -251,7 +252,8 @@ class StudyParser(object):
 
         self.study["Publications"] = publications
 
-    def parse_data_doi(self, d, key):
+    @staticmethod
+    def parse_data_doi(d, key):
         if key not in d:
             return {}
         m = DOI_PATTERN.match(d[key])
