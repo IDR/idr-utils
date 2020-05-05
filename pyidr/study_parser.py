@@ -40,6 +40,7 @@ KEYS = (
     # OPTIONAL_KEYS["Study"]
     Key('Study Version History', 'Study', optional=True),
     Key('Study BioStudies Accession', 'Study', optional=True),
+    Key('Study BioImage Archive Accession', 'Study', optional=True),
     Key('Study EMPIAR Accession', 'Study', optional=True),
     Key('Study Publication Preprint', 'Study', optional=True),
     Key('Study PubMed ID', 'Study', optional=True),
@@ -314,6 +315,9 @@ class Formatter(object):
         ('Data Publisher', "%(Study Data Publisher)s"),
         ('Data DOI', "%(Data DOI)s "
          "https://doi.org/%(Data DOI)s"),
+        ('BioStudies Accession', "%(Study BioImage Archive Accession)s"
+         " https://www.ebi.ac.uk/biostudies/studies/"
+         "%(Study BioImage Archive Accession)s"),
         ('BioStudies Accession', "%(Study BioStudies Accession)s"
          " https://www.ebi.ac.uk/biostudies/studies/"
          "%(Study BioStudies Accession)s"),
