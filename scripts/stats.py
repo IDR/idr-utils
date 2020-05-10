@@ -76,7 +76,7 @@ def studies():
             target = "Dataset"
             containers = glob(join(study, "experiment*"))
 
-        assert containers >= 1
+        assert len(containers) >= 1
         for container in sorted(containers):
             bulks = glob(join(container, "*-bulk.yml"))
             bulks += glob(join(container, "**/*-bulk.yml"))
