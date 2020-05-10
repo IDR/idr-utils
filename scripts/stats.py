@@ -99,7 +99,7 @@ def studies():
 
                 if not exists(p) and exists("%s.gz" % p):
                     p = "%s.gz" % p
-                with fileinput.input(files=[p], openhook=hook_compressed) as f:
+                with input(files=[p], openhook=hook_compressed) as f:
                     for line in f:
                         parts = line.strip().split("\t")
                         if name_idx:
