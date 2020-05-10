@@ -99,18 +99,19 @@ def studies():
 
                 if not exists(p) and exists("%s.gz" % p):
                     p = "%s.gz" % p
-                for line in eval(input([p], openhook=hook_compressed)):
-                    parts = line.strip().split("\t")
-                    if name_idx:
-                        name = parts[name_idx]
-                    else:
-                        if path_idx < len(parts):
-                            name = basename(parts[path_idx])
+                with fileinput.input(files=[p], openhook=hook_compressed) as f:
+                    for line in f:
+                        parts = line.strip().split("\t")
+                        if name_idx:
+                            name = parts[name_idx]
                         else:
-                            raise Exception(path_idx, container, bulk)
-                    if target_idx:
-                        target = parts[target_idx]
-                    rv[study][container][target].append(name)
+                            if path_idx < len(parts):
+                                name = basename(parts[path_idx])
+                            else:
+                                raise Exception(path_idx, container, bulk)
+                        if target_idx:
+                            target = parts[target_idx]
+                        rv[study][container][target].append(name)
 
     for study, containers in sorted(rv.items()):
         for container, types in sorted(containers.items()):
