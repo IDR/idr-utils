@@ -65,7 +65,7 @@ def studies():
     for study in sorted(glob("idr*")):
         if study[-1] == "/":
             study = study[0:-1]
-        if "idr0000-" in study:
+        if "idr0000-" in study or "idr-utils" in study:
             continue
 
         target = "Plate"
