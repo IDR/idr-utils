@@ -102,7 +102,7 @@ def studies():
                 with input(files=[p], openhook=hook_compressed) as f:
                     for line in f:
                         if isinstance(line, bytes):  # compressed files
-                            line.decode()
+                            line = line.decode('utf-8')
                         parts = line.strip().split("\t")
                         if name_idx:
                             name = parts[name_idx]
