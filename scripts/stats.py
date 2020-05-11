@@ -11,6 +11,7 @@ from os.path import dirname
 from os.path import exists
 from os.path import join
 from sys import stderr
+import logging
 
 
 from omero import all  # noqa
@@ -68,6 +69,7 @@ def studies():
         if "idr0000-" in study or "idr-utils" in study:
             continue
 
+        logging.info("Finding containers for study %s" % study)
         target = "Plate"
         containers = glob(join(study, "screen[ABC]"))
         if containers:
@@ -191,6 +193,7 @@ def stat_screens(query):
 
     for study, containers in sorted(studies().items()):
         for container, set_expected in sorted(containers.items()):
+            logging.info("Retrieving stats for %s" % container)
             params = ParametersI()
             params.addString("container", container)
             if "Plate" in set_expected:
@@ -310,7 +313,13 @@ def main():
     parser.add_argument("--copy-type", default="Image")
     parser.add_argument("--copy-to", type=int, default=None)
     parser.add_argument("screen", nargs="?")
+    parser.add_argument('-v', '--verbose', action='count', default=0)
     ns = parser.parse_args()
+
+    levels = [logging.WARNING, logging.INFO, logging.DEBUG]
+    level = levels[min(len(levels)-1, ns.verbose)]
+    logging.basicConfig(
+        level=level, format="%(asctime)s %(levelname)s %(message)s")
 
     cli = CLI()
     cli.loadplugins()
