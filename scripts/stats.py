@@ -71,12 +71,12 @@ def studies():
 
         logging.info("Finding containers for study %s" % study)
         target = "Plate"
-        containers = glob(join(study, "screen[ABC]"))
+        containers = glob(join(study, "screen[A-Z]"))
         if containers:
             assert not glob(join(study, "experiment*")), study
         else:
             target = "Dataset"
-            containers = glob(join(study, "experiment*"))
+            containers = glob(join(study, "experiment[A-Z]"))
 
         assert len(containers) >= 1
         for container in sorted(containers):
