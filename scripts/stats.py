@@ -11,6 +11,7 @@ from os.path import dirname
 from os.path import exists
 from os.path import join
 from sys import stderr
+import logging
 
 
 from omero import all  # noqa
@@ -65,18 +66,19 @@ def studies():
     for study in sorted(glob("idr*")):
         if study[-1] == "/":
             study = study[0:-1]
-        if "idr0000-" in study:
+        if "idr0000-" in study or "idr-utils" in study:
             continue
 
+        logging.info("Finding containers for study %s" % study)
         target = "Plate"
-        containers = glob(join(study, "screen[ABC]"))
+        containers = glob(join(study, "screen[A-Z]"))
         if containers:
             assert not glob(join(study, "experiment*")), study
         else:
             target = "Dataset"
-            containers = glob(join(study, "experiment*"))
+            containers = glob(join(study, "experiment[A-Z]"))
 
-        assert containers >= 1
+        assert len(containers) >= 1
         for container in sorted(containers):
             bulks = glob(join(container, "*-bulk.yml"))
             bulks += glob(join(container, "**/*-bulk.yml"))
@@ -99,18 +101,21 @@ def studies():
 
                 if not exists(p) and exists("%s.gz" % p):
                     p = "%s.gz" % p
-                for line in eval(input([p], openhook=hook_compressed)):
-                    parts = line.strip().split("\t")
-                    if name_idx:
-                        name = parts[name_idx]
-                    else:
-                        if path_idx < len(parts):
-                            name = basename(parts[path_idx])
+                with input(files=[p], openhook=hook_compressed) as f:
+                    for line in f:
+                        if isinstance(line, bytes):  # compressed files
+                            line = line.decode('utf-8')
+                        parts = line.strip().split("\t")
+                        if name_idx:
+                            name = parts[name_idx]
                         else:
-                            raise Exception(path_idx, container, bulk)
-                    if target_idx:
-                        target = parts[target_idx]
-                    rv[study][container][target].append(name)
+                            if path_idx < len(parts):
+                                name = basename(parts[path_idx])
+                            else:
+                                raise Exception(path_idx, container, bulk)
+                        if target_idx:
+                            target = parts[target_idx]
+                        rv[study][container][target].append(name)
 
     for study, containers in sorted(rv.items()):
         for container, types in sorted(containers.items()):
@@ -188,6 +193,7 @@ def stat_screens(query):
 
     for study, containers in sorted(studies().items()):
         for container, set_expected in sorted(containers.items()):
+            logging.info("Retrieving stats for %s" % container)
             params = ParametersI()
             params.addString("container", container)
             if "Plate" in set_expected:
@@ -307,7 +313,13 @@ def main():
     parser.add_argument("--copy-type", default="Image")
     parser.add_argument("--copy-to", type=int, default=None)
     parser.add_argument("screen", nargs="?")
+    parser.add_argument('-v', '--verbose', action='count', default=0)
     ns = parser.parse_args()
+
+    levels = [logging.WARNING, logging.INFO, logging.DEBUG]
+    level = levels[min(len(levels)-1, ns.verbose)]
+    logging.basicConfig(
+        level=level, format="%(asctime)s %(levelname)s %(message)s")
 
     cli = CLI()
     cli.loadplugins()
