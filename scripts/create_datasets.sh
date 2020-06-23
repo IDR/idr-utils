@@ -4,10 +4,13 @@ if [ "$#" -ne 2 ]
 then
     echo "
 This script iterates over the filePaths.tsv, creates all
-Datasets and links them to the Project.
+datasets and links them to the project.
 
 Usage:
 ./create_datasets.sh [PROJECT ID] [PATH TO filePaths.tsv]
+
+Note: The script assumes that the first column contains the 
+dataset names in the format Dataset:name:[DATASET_NAME]
 "
     exit 1
 fi
