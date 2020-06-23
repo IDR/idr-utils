@@ -315,6 +315,7 @@ class Formatter(object):
         ('Data Publisher', "%(Study Data Publisher)s"),
         ('Data DOI', "%(Data DOI)s "
          "https://doi.org/%(Data DOI)s"),
+        ('External URL', "%(Study External URL)s"),
         ('BioStudies Accession', "%(Study BioImage Archive Accession)s"
          " https://www.ebi.ac.uk/biostudies/studies/"
          "%(Study BioImage Archive Accession)s"),
