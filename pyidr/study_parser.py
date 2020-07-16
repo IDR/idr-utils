@@ -61,6 +61,7 @@ KEYS = (
     Key('Study Person Address', 'Study', optional=True),
     Key('Study Person Roles', 'Study', optional=True),
     Key('Study Person ORCID', 'Study', optional=True),
+    Key('Study Key Words', 'Study', optional=True),
     Key('Term Source Name', 'Study', optional=True),
     Key('Term Source URI', 'Study', optional=True),
     # MANDATORY_KEYS["Experiment"]
@@ -431,14 +432,17 @@ class Formatter(object):
         self.log.info("Checking %s %s" % (obj.OMERO_CLASS, obj.name))
 
         if obj.description != d["description"]:
-            self.log.error("Mismatching description")
-            self.log.debug("current:%s" % obj.description,)
-            self.log.debug("expected:%s" % d["description"])
             status = False
             if update:
                 self.log.info("Updating description")
+                self.log.debug("previous:%s" % obj.description,)
+                self.log.debug("new:%s" % d["description"])
                 obj.setDescription(d["description"])
                 obj.save()
+            else:
+                self.log.error("Mismatching description")
+                self.log.debug("current:%s" % obj.description,)
+                self.log.debug("expected:%s" % d["description"])
 
         for ann in obj.listAnnotations(
                 ns=omero.constants.metadata.NSCLIENTMAPANNOTATION):
@@ -464,7 +468,6 @@ class Formatter(object):
                 "Found multiple annotations with the %s namespace" % STUDY_NS)
             status = False
         elif len(anns) == 0:
-            self.log.error("No map annotation found")
             if update:
                 self.log.info("Creating map annotation")
                 m = MapAnnotationWrapper(conn=obj._conn)
@@ -472,15 +475,20 @@ class Formatter(object):
                 m.setValue(value)
                 m.save()
                 obj.linkAnnotation(m)
+            else:
+                self.log.error("No map annotation found")
         elif anns[0].getValue() != value:
-            self.log.error("Mismatching annotation")
-            self.log.debug("current:%s" % anns[0].getValue())
-            self.log.debug("expected:%s" % value)
             status = False
             if update:
                 self.log.info("Updating map annotation")
+                self.log.debug("previous:%s" % anns[0].getValue())
+                self.log.debug("new:%s" % value)
                 anns[0].setValue(value)
                 anns[0].save()
+            else:
+                self.log.error("Mismatching annotation")
+                self.log.debug("current:%s" % anns[0].getValue())
+                self.log.debug("expected:%s" % value)
         return status
 
     def check_study(self, gateway, update=False):
