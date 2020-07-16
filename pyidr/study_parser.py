@@ -468,7 +468,6 @@ class Formatter(object):
                 "Found multiple annotations with the %s namespace" % STUDY_NS)
             status = False
         elif len(anns) == 0:
-            self.log.error("No map annotation found")
             if update:
                 self.log.info("Creating map annotation")
                 m = MapAnnotationWrapper(conn=obj._conn)
@@ -476,6 +475,8 @@ class Formatter(object):
                 m.setValue(value)
                 m.save()
                 obj.linkAnnotation(m)
+            else:
+                self.log.error("No map annotation found")
         elif anns[0].getValue() != value:
             status = False
             if update:
