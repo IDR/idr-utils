@@ -26,7 +26,7 @@ setup(
     install_requires=[
         "future",
         "PyYAML",
-        "pandas<0.19",
+        "pandas",
         "flake8",
         "yamllint"
     ]
