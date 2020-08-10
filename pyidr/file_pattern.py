@@ -1,7 +1,7 @@
 """
 Bio-Formats style file patterns.
 
-www.openmicroscopy.org/site/support/bio-formats5.1/formats/pattern-file.html
+https://docs.openmicroscopy.org/bio-formats/latest/formats/pattern-file.html
 """
 
 from builtins import range
