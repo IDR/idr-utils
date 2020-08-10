@@ -23,4 +23,4 @@ if ! command -v "$alg"; then
 fi
 
 cd "$target"
-find . -type f -print0 | sort -z | xargs -0 -n1 "$alg"
+find * -type f -print0 | sort -z | xargs -0 -n1 "$alg"
