@@ -9,11 +9,11 @@ def printusage():
 Checks an IDR dataset to make sure each image/well has an annotation.
 Prints the images/wells which don't have any annotations to stdout.
 
-If an annotation.csv is provided the images will be checked if they have 
-a corresponding entry in the annotation.csv. If it is omitted the images 
+If an annotation.csv is provided the images will be checked if they have
+a corresponding entry in the annotation.csv. If it is omitted the images
 will simply be check if they have at least one annotation attached.
 
-Usage: 
+Usage:
 python check_annotations.py Project:[Project ID] [path to annotation.csv] >> \
 no_annotations.csv
 or
