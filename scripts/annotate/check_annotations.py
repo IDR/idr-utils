@@ -1,4 +1,5 @@
 from omero.gateway import BlitzGateway
+from omero.model import MapAnnotationI
 import pandas
 import sys
 import os
@@ -82,6 +83,14 @@ def print_missing(a, b, iid=None):
         print("%s,%s" % (a, b))
 
 
+def check_annotations(anns):
+    if anns:
+        for ann in anns:
+            if ann.OMERO_TYPE == MapAnnotationI:
+                return True
+    return False
+
+
 if projectId:
     project = conn.getObject("Project", projectId)
     for ds in project.listChildren():
@@ -93,7 +102,7 @@ if projectId:
                 else:
                     csv_data.remove(key)
             else:
-                if len(list(img.listAnnotations())) == 0:
+                if not check_annotations(img.listAnnotations()):
                     print_missing(ds.getName(), img.getName(), iid=img.getId())
 elif screenId:
     screen = conn.getObject("Screen", screenId)
@@ -106,7 +115,7 @@ elif screenId:
                 else:
                     csv_data.remove(key)
             else:
-                if len(list(well.listAnnotations())) == 0:
+                if not check_annotations(well.listAnnotations()):
                     print_missing(pl.getName(), well.getWellPos())
 
 conn.close()
