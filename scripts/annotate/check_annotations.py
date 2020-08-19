@@ -29,6 +29,8 @@ are not necessary but are taken into account if set.
 if len(sys.argv) < 2:
     printusage()
 else:
+    if sys.argv[1] == '-h' or sys.argv[1] == '--help':
+        printusage()
     target = sys.argv[1].split(':')
     if target[0] == 'Project':
         projectId = int(target[1])
