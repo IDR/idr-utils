@@ -21,7 +21,6 @@ from omero.cli import CLI
 from omero.cli import Parser
 from omero.rtypes import unwrap
 from omero.sys import ParametersI
-from omero.util.text import filesizeformat
 
 from yaml import safe_load
 
@@ -205,13 +204,15 @@ def stat_top_level(query, study_list, printfmt='string'):
     #     "Avg. Image Dim (XYZCT)",
     # ))
     df = pd.DataFrame(columns=(
-        "Container", "ID", "Set", "Wells", "Images", "Planes", "Bytes"))
-
-    plate_count = 0
-    well_count = 0
-    image_count = 0
-    plane_count = 0
-    byte_count = 0
+        "Study",
+        "Container",
+        "ID",
+        "Set",
+        "Wells",
+        "Images",
+        "Planes",
+        "Bytes",
+    ))
 
     for study, containers in sorted(studies(study_list).items()):
         for container, set_expected in sorted(containers.items()):
@@ -226,30 +227,43 @@ def stat_top_level(query, study_list, printfmt='string'):
                 rv = unwrap(query.projection(PDI_QUERY, params))
             else:
                 raise Exception("unknown: %s" % list(set_expected.keys()))
+            nexpected = len(expected)
 
+            container1, container2 = container.split('/', 1)
             if not rv:
-                df.loc[len(df)] = (container, "MISSING", "", "", "", "", "")
+                df.loc[len(df)] = (
+                    container1,
+                    container2,
+                    "MISSING",
+                    0,
+                    0,
+                    0,
+                    0,
+                    0)
             else:
                 for x in rv:
                     plate_id, plates, wells, images, planes, bytes = x
-                    plate_count += plates
-                    well_count += wells
-                    image_count += images
-                    if planes:
-                        plane_count += planes
-                    if bytes:
-                        byte_count += bytes
-                    else:
+                    if not planes:
+                        planes = 0
+                    if not bytes:
                         bytes = 0
-                    if plates != len(expected):
-                        plates = "%s of %s" % (plates, len(expected))
+                    if plates != nexpected:
+                        print(
+                            f"Warning: {container}: got {plates} plates "
+                            f"expected {nexpected}")
                     df.loc[len(df)] = (
-                        container, plate_id, plates, wells, images, planes,
-                        filesizeformat(bytes))
+                        container1,
+                        container2,
+                        plate_id,
+                        nexpected,
+                        wells,
+                        images,
+                        planes,
+                        bytes,
+                    )
 
-    df.loc[len(df)] = (
-        "Total", "", plate_count, well_count, image_count, plane_count,
-        filesizeformat(byte_count))
+    totals = df.iloc[:, -5:].sum()
+    df.loc[len(df)] = ["Total", "", ""] + totals.to_list()
 
     with pd.option_context(
             'display.max_rows', None, 'display.max_columns', None):
