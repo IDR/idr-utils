@@ -24,7 +24,7 @@ from omero.sys import ParametersI  # noqa
 from omero.util.text import TableBuilder  # noqa
 from omero.util.text import filesizeformat  # noqa
 
-from yaml import load
+from yaml import safe_load
 
 PDI_QUERY = (
     "select p.id, count(distinct d.id), "
@@ -60,7 +60,7 @@ SPW_QUERY = (
 
 def studies():
     with open("bulk.yml") as f:
-        default_columns = load(f).get("columns", {})
+        default_columns = safe_load(f).get("columns", {})
 
     rv = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     for study in sorted(glob("idr*")):
@@ -85,7 +85,7 @@ def studies():
             for bulk in bulks:
                 pdir = dirname(bulk)
                 with open(bulk, "r") as f:
-                    y = load(f)
+                    y = safe_load(f)
                 p = join(pdir, y["path"])
                 columns = y.get("columns", default_columns)
                 name_idx = None
