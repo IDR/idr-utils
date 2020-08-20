@@ -186,23 +186,33 @@ def stat_top_level(query, study_list, printfmt='string'):
     df = pd.DataFrame(columns=(
         "Study",
         "Container",
-        # "Introduced",
+        "Introduced",
         "ID",  # "Internal ID"
         "Set",
         "Wells",
-        # "Experiments
+        "Experiments",
         #    (wells for screens, imaging experiments for non-screens)",
-        # "Targets (genes, small molecules, geographic locations, or
-        #    combination of factors (idr0019, 26, 34, 38)",
-        # "Acquisitions",
+        "Targets",
+        #    (genes, small molecules, geographic locations, or combination of
+        #    factors (idr0019, 26, 34, 38)",
+        "Acquisitions",
         "Images",  # "5D Images"
         "Planes",
-        # "Size (TB)",
+        "Size (TB)",
         "Bytes",  # "Size"
-        # "# of Files",
-        # "avg. size (MB)",
-        # "Avg. Image Dim (XYZCT)",
+        "# of Files",
+        "avg. size (MB)",
+        "Avg. Image Dim (XYZCT)",
     ))
+
+    # Placeholders:
+    introduced = ""
+    experiments = None
+    targets = None
+    acquisitions = None
+    files = None
+    avg_size = None
+    avn_image_dim = None
 
     for study, containers in sorted(studies(study_list).items()):
         for container, set_expected in sorted(containers.items()):
@@ -224,12 +234,21 @@ def stat_top_level(query, study_list, printfmt='string'):
                 df.loc[len(df)] = (
                     container1,
                     container2,
+                    introduced,
                     "MISSING",
                     0,
                     0,
+                    experiments,
+                    targets,
+                    acquisitions,
                     0,
                     0,
-                    0)
+                    0,
+                    0,
+                    files,
+                    avg_size,
+                    avn_image_dim,
+                )
             else:
                 for x in rv:
                     plate_id, plates, wells, images, planes, bytes = x
@@ -244,16 +263,24 @@ def stat_top_level(query, study_list, printfmt='string'):
                     df.loc[len(df)] = (
                         container1,
                         container2,
+                        introduced,
                         plate_id,
                         nexpected,
                         wells,
+                        experiments,
+                        targets,
+                        acquisitions,
                         images,
                         planes,
+                        bytes / 2 ** 40,
                         bytes,
+                        files,
+                        avg_size,
+                        avn_image_dim,
                     )
 
-    totals = df.iloc[:, -5:].sum()
-    df.loc[len(df)] = ["Total", "", ""] + totals.to_list()
+    totals = df.iloc[:, -12:-2].sum()
+    df.loc[len(df)] = ["Total", "", "", ""] + totals.to_list() + ["", ""]
 
     with pd.option_context(
             'display.max_rows', None, 'display.max_columns', None):
