@@ -180,7 +180,7 @@ def check_search(query, search):
                 continue
 
 
-def stat_screens(query):
+def stat_top_level(query):
 
     tb = TableBuilder("Container")
     tb.cols(["ID", "Set", "Wells", "Images", "Planes", "Bytes"])
@@ -325,7 +325,7 @@ def main():
             search = client.sf.createSearchService()
             check_search(query, search)
         elif not ns.screen:
-            stat_screens(query)
+            stat_top_level(query)
         else:
             for x in stat_plates(query, ns.screen, ns.images):
                 print(x)
