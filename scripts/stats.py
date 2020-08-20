@@ -228,74 +228,6 @@ def stat_top_level(query):
     print(str(tb.build()))
 
 
-def stat_plates(query, screen, images=False):
-
-    params = ParametersI()
-    params.addString("screen", screen)
-
-    obj = query.findByQuery((
-        "select s from Screen s "
-        "where s.name = :screen"), params)
-
-    if not obj:
-        raise Exception("unknown screen: %s" % screen)
-
-    if images:
-        q = ("select %s from Image i "
-             "join i.wellSamples ws join ws.well w "
-             "join w.plate p join p.screenLinks sl "
-             "join sl.parent s where s.name = :screen")
-
-        limit = 1000
-        found = 0
-        count = unwrap(query.projection(
-            q % "count(distinct i.id)", params
-        ))[0][0]
-        print(count, file=stderr)
-        params.page(0, limit)
-
-        q = q % "distinct i.id"
-        q = "%s order by i.id" % q
-        while count > 0:
-            rv = unwrap(query.projection(q, params))
-            count -= len(rv)
-            found += len(rv)
-            params.page(found, limit)
-            for x in rv:
-                yield x[0]
-        return
-
-    plates = glob(join(screen, "plates", "*"))
-    plates = list(map(basename, plates))
-
-    tb = TableBuilder("Plate")
-    tb.cols(["PID", "Wells", "Images"])
-
-    well_count = 0
-    image_count = 0
-    for plate in plates:
-        params.addString("plate", plate)
-        rv = unwrap(query.projection((
-            "select p.id, count(distinct w.id), count(distinct i.id)"
-            "  from Screen s "
-            "left outer join s.plateLinks spl join spl.child as p "
-            "left outer join p.wells as w "
-            "left outer join w.wellSamples as ws "
-            "left outer join ws.image as i "
-            "where s.name = :screen and p.name = :plate "
-            "group by p.id"), params))
-        if not rv:
-            tb.row(plate, "MISSING", "", "")
-        else:
-            for x in rv:
-                plate_id, wells, images = x
-                well_count += wells
-                image_count += images
-                tb.row(plate, plate_id, wells, images)
-    tb.row("Total", "", well_count, image_count)
-    print(str(tb.build()))
-
-
 def main():
     parser = Parser()
     parser.add_login_arguments()
@@ -324,11 +256,8 @@ def main():
         elif ns.search:
             search = client.sf.createSearchService()
             check_search(query, search)
-        elif not ns.screen:
-            stat_top_level(query)
         else:
-            for x in stat_plates(query, ns.screen, ns.images):
-                print(x)
+            stat_top_level(query)
     finally:
         cli.close()
 
