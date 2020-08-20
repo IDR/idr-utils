@@ -222,16 +222,18 @@ def stat_top_level(query, study_list, printfmt='string'):
         "Wells",
         "Experiments",
         #    (wells for screens, imaging experiments for non-screens)",
+        #    TODO: remove
         "Targets",
         #    (genes, small molecules, geographic locations, or combination of
         #    factors (idr0019, 26, 34, 38)",
+        #    TODO: remove
         "Acquisitions",
         "Images",  # "5D Images"
         "Planes",
-        "Size (TB)",
-        "Bytes",  # "Size"
-        "# of Files",
-        "avg. size (MB)",
+        "Size (TB)",  # TODO: from fs usage
+        "Bytes",  # "Size"  # TODO: from fs usage
+        "# of Files",  # TODO: from fs usage
+        "avg. size (MB)",  # TODO: from fs usage
         "Avg. Image Dim (XYZCT)",
     ))
 
@@ -287,9 +289,9 @@ def stat_top_level(query, study_list, printfmt='string'):
                     if not bytes:
                         bytes = 0
                     if plates != nexpected:
-                        print(
-                            f"Warning: {container}: got {plates} plates "
-                            f"expected {nexpected}")
+                        logging.warning(
+                            '%s: got %d plates expected %d',
+                            container, plates, nexpected)
                     df.loc[len(df)] = (
                         container1,
                         container2,
@@ -312,9 +314,13 @@ def stat_top_level(query, study_list, printfmt='string'):
     totals = df.iloc[:, -12:-2].sum()
     df.loc[len(df)] = ["Total", "", "", ""] + totals.to_list() + ["", ""]
 
-    with pd.option_context(
-            'display.max_rows', None, 'display.max_columns', None):
-        print(getattr(df, f'to_{printfmt}')(index=False))
+    if printfmt == 'tsv':
+        out = df.to_csv(sep='\t', index=False)
+    elif printfmt in ('json',):
+        out = getattr(df, f'to_{printfmt}')()
+    else:
+        out = getattr(df, f'to_{printfmt}')(index=False)
+    print(out)
 
 
 def main():
@@ -325,8 +331,7 @@ def main():
     parser.add_argument("--search", action="store_true")
     parser.add_argument("--images", action="store_true")
     parser.add_argument("--format", default="string", help=(
-        "Output format, this can be any format support by the "
-        "pandas.DataFrame.to_* format such as 'csv'"))
+        "Output format, includes 'string', 'csv', 'tsv', and others"))
     parser.add_argument(
         "studies", nargs='*',
         help="Studies to be processed, default all (idr*)")
