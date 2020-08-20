@@ -296,12 +296,6 @@ def stat_plates(query, screen, images=False):
     print(str(tb.build()))
 
 
-def copy(client, copy_from, copy_type, copy_to):
-    gateway = BlitzGateway(client_obj=client)
-    print(gateway.applySettingsToSet(copy_from, copy_type, [copy_to]))
-    gateway.getObject("Image", copy_to).getThumbnail(size=(96,), direct=False)
-
-
 def main():
     parser = Parser()
     parser.add_login_arguments()
@@ -309,9 +303,6 @@ def main():
     parser.add_argument("--unknown", action="store_true")
     parser.add_argument("--search", action="store_true")
     parser.add_argument("--images", action="store_true")
-    parser.add_argument("--copy-from", type=int, default=None)
-    parser.add_argument("--copy-type", default="Image")
-    parser.add_argument("--copy-to", type=int, default=None)
     parser.add_argument("screen", nargs="?")
     parser.add_argument('-v', '--verbose', action='count', default=0)
     ns = parser.parse_args()
@@ -336,11 +327,8 @@ def main():
         elif not ns.screen:
             stat_screens(query)
         else:
-            if ns.copy_to:
-                copy(client, ns.copy_from, ns.copy_type, ns.copy_to)
-            else:
-                for x in stat_plates(query, ns.screen, ns.images):
-                    print(x)
+            for x in stat_plates(query, ns.screen, ns.images):
+                print(x)
     finally:
         cli.close()
 
