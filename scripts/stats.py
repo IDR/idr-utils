@@ -10,19 +10,18 @@ from os.path import basename
 from os.path import dirname
 from os.path import exists
 from os.path import join
+import pandas as pd
 from sys import stderr
 import logging
 
 
 from omero import all  # noqa
-from omero import ApiUsageException  # noqa
-from omero.cli import CLI  # noqa
-from omero.cli import Parser  # noqa
-from omero.gateway import BlitzGateway  # noqa
-from omero.rtypes import unwrap  # noqa
-from omero.sys import ParametersI  # noqa
-from omero.util.text import TableBuilder  # noqa
-from omero.util.text import filesizeformat  # noqa
+from omero import ApiUsageException
+from omero.cli import CLI
+from omero.cli import Parser
+from omero.rtypes import unwrap
+from omero.sys import ParametersI
+from omero.util.text import filesizeformat
 
 from yaml import safe_load
 
@@ -182,10 +181,31 @@ def check_search(query, search):
                 continue
 
 
-def stat_top_level(query, study_list):
+def stat_top_level(query, study_list, printfmt='string'):
+    # printfmt can be any of the pandas.Dataframe.to_{printfmt} methods
 
-    tb = TableBuilder("Container")
-    tb.cols(["ID", "Set", "Wells", "Images", "Planes", "Bytes"])
+    # df = pd.DataFrame(columns=(
+    #     "Study",
+    #     "Container",
+    #     "Introduced",
+    #     "Internal ID",
+    #     "Sets",
+    #     "Wells",
+    #     "Experiments
+    #        (wells for screens, imaging experiments for non-screens)",
+    #     "Targets (genes, small molecules, geographic locations, or
+    #        combination of factors (idr0019, 26, 34, 38)",
+    #     "Acquisitions",
+    #     "5D Images",
+    #     "Planes",
+    #     "Size (TB)",
+    #     "Size",
+    #     "# of Files",
+    #     "avg. size (MB)",
+    #     "Avg. Image Dim (XYZCT)",
+    # ))
+    df = pd.DataFrame(columns=(
+        "Container", "ID", "Set", "Wells", "Images", "Planes", "Bytes"))
 
     plate_count = 0
     well_count = 0
@@ -208,7 +228,7 @@ def stat_top_level(query, study_list):
                 raise Exception("unknown: %s" % list(set_expected.keys()))
 
             if not rv:
-                tb.row(container, "MISSING", "", "", "", "", "")
+                df.loc[len(df)] = (container, "MISSING", "", "", "", "", "")
             else:
                 for x in rv:
                     plate_id, plates, wells, images, planes, bytes = x
@@ -223,11 +243,17 @@ def stat_top_level(query, study_list):
                         bytes = 0
                     if plates != len(expected):
                         plates = "%s of %s" % (plates, len(expected))
-                    tb.row(container, plate_id, plates, wells, images, planes,
-                           filesizeformat(bytes))
-    tb.row("Total", "", plate_count, well_count, image_count, plane_count,
-           filesizeformat(byte_count))
-    print(str(tb.build()))
+                    df.loc[len(df)] = (
+                        container, plate_id, plates, wells, images, planes,
+                        filesizeformat(bytes))
+
+    df.loc[len(df)] = (
+        "Total", "", plate_count, well_count, image_count, plane_count,
+        filesizeformat(byte_count))
+
+    with pd.option_context(
+            'display.max_rows', None, 'display.max_columns', None):
+        print(getattr(df, f'to_{printfmt}')(index=False))
 
 
 def main():
@@ -237,6 +263,9 @@ def main():
     parser.add_argument("--unknown", action="store_true")
     parser.add_argument("--search", action="store_true")
     parser.add_argument("--images", action="store_true")
+    parser.add_argument("--format", default="string", help=(
+        "Output format, this can be any format support by the "
+        "pandas.DataFrame.to_* format such as 'csv'"))
     parser.add_argument(
         "studies", nargs='*',
         help="Studies to be processed, default all (idr*)")
@@ -261,7 +290,7 @@ def main():
             search = client.sf.createSearchService()
             check_search(query, search)
         else:
-            stat_top_level(query, ns.studies)
+            stat_top_level(query, ns.studies, ns.format)
     finally:
         cli.close()
 
