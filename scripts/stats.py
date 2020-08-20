@@ -55,6 +55,51 @@ SPW_QUERY = (
     "where s.name = :container "
     "group by s.id")
 
+PROJECT_AVG_SIZE_QUERY = """
+      SELECT
+        CONCAT(
+          CAST(ROUND(AVG(pix.sizeX)) as int),
+          ' x ',
+          CAST(ROUND(AVG(pix.sizeY)) as int),
+          ' x ',
+          CAST(ROUND(AVG(pix.sizeZ)) as int),
+          ' x ',
+          CAST(ROUND(AVG(pix.sizeC)) as int),
+          ' x ',
+          CAST(ROUND(AVG(pix.sizeT)) as int)
+        )
+      FROM Project p
+      LEFT OUTER JOIN p.datasetLinks pdl
+      LEFT OUTER JOIN pdl.child d
+      LEFT OUTER JOIN d.imageLinks as dil
+      LEFT OUTER JOIN dil.child as i
+      LEFT OUTER JOIN i.pixels as pix
+      WHERE p.name = :container
+"""
+
+SCREEN_AVG_SIZE_QUERY = """
+      SELECT
+        CONCAT(
+          CAST(ROUND(AVG(pix.sizeX)) as int),
+          ' x ',
+          CAST(ROUND(AVG(pix.sizeY)) as int),
+          ' x ',
+          CAST(ROUND(AVG(pix.sizeZ)) as int),
+          ' x ',
+          CAST(ROUND(AVG(pix.sizeC)) as int),
+          ' x ',
+          CAST(ROUND(AVG(pix.sizeT)) as int)
+        )
+      FROM Screen s
+      LEFT OUTER JOIN s.plateLinks spl
+      LEFT OUTER JOIN spl.child as p
+      LEFT OUTER JOIN p.wells as w
+      LEFT OUTER JOIN w.wellSamples as ws
+      LEFT OUTER JOIN ws.image as i
+      LEFT OUTER JOIN i.pixels as pix
+      WHERE s.name = :container
+"""
+
 
 def studies(study_list):
     with open("bulk.yml") as f:
@@ -212,7 +257,6 @@ def stat_top_level(query, study_list, printfmt='string'):
     acquisitions = None
     files = None
     avg_size = None
-    avn_image_dim = None
 
     for study, containers in sorted(studies(study_list).items()):
         for container, set_expected in sorted(containers.items()):
@@ -222,14 +266,19 @@ def stat_top_level(query, study_list, printfmt='string'):
             if "Plate" in set_expected:
                 expected = set_expected["Plate"]
                 rv = unwrap(query.projection(SPW_QUERY, params))
+                img_stats = unwrap(query.projection(
+                    SCREEN_AVG_SIZE_QUERY, params))
             elif "Dataset" in set_expected:
                 expected = set_expected["Dataset"]
                 rv = unwrap(query.projection(PDI_QUERY, params))
+                img_stats = unwrap(query.projection(
+                    PROJECT_AVG_SIZE_QUERY, params))
             else:
                 raise Exception("unknown: %s" % list(set_expected.keys()))
             nexpected = len(expected)
 
             container1, container2 = container.split('/', 1)
+            avn_image_dim = img_stats[0][0]
             if not rv:
                 df.loc[len(df)] = (
                     container1,
