@@ -183,35 +183,25 @@ def check_search(query, search):
 def stat_top_level(query, study_list, printfmt='string'):
     # printfmt can be any of the pandas.Dataframe.to_{printfmt} methods
 
-    # df = pd.DataFrame(columns=(
-    #     "Study",
-    #     "Container",
-    #     "Introduced",
-    #     "Internal ID",
-    #     "Sets",
-    #     "Wells",
-    #     "Experiments
-    #        (wells for screens, imaging experiments for non-screens)",
-    #     "Targets (genes, small molecules, geographic locations, or
-    #        combination of factors (idr0019, 26, 34, 38)",
-    #     "Acquisitions",
-    #     "5D Images",
-    #     "Planes",
-    #     "Size (TB)",
-    #     "Size",
-    #     "# of Files",
-    #     "avg. size (MB)",
-    #     "Avg. Image Dim (XYZCT)",
-    # ))
     df = pd.DataFrame(columns=(
         "Study",
         "Container",
-        "ID",
+        # "Introduced",
+        "ID",  # "Internal ID"
         "Set",
         "Wells",
-        "Images",
+        # "Experiments
+        #    (wells for screens, imaging experiments for non-screens)",
+        # "Targets (genes, small molecules, geographic locations, or
+        #    combination of factors (idr0019, 26, 34, 38)",
+        # "Acquisitions",
+        "Images",  # "5D Images"
         "Planes",
-        "Bytes",
+        # "Size (TB)",
+        "Bytes",  # "Size"
+        # "# of Files",
+        # "avg. size (MB)",
+        # "Avg. Image Dim (XYZCT)",
     ))
 
     for study, containers in sorted(studies(study_list).items()):
