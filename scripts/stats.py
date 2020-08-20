@@ -58,12 +58,14 @@ SPW_QUERY = (
     "group by s.id")
 
 
-def studies():
+def studies(study_list):
     with open("bulk.yml") as f:
         default_columns = safe_load(f).get("columns", {})
 
     rv = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-    for study in sorted(glob("idr*")):
+    if not study_list:
+        study_list = sorted(glob("idr*"))
+    for study in study_list:
         if study[-1] == "/":
             study = study[0:-1]
         if "idr0000-" in study or "idr-utils" in study:
@@ -136,9 +138,9 @@ def orphans(query):
     print("Total:", len(orphans), file=stderr)
 
 
-def unknown(query):
+def unknown(query, study_list):
     on_disk = []
-    for study, screens in sorted(studies().items()):
+    for study, screens in sorted(studies(study_list).items()):
         for screen, plates in list(screens.items()):
             on_disk.append(screen)
             on_disk.extend(plates)
@@ -180,7 +182,7 @@ def check_search(query, search):
                 continue
 
 
-def stat_top_level(query):
+def stat_top_level(query, study_list):
 
     tb = TableBuilder("Container")
     tb.cols(["ID", "Set", "Wells", "Images", "Planes", "Bytes"])
@@ -191,7 +193,7 @@ def stat_top_level(query):
     plane_count = 0
     byte_count = 0
 
-    for study, containers in sorted(studies().items()):
+    for study, containers in sorted(studies(study_list).items()):
         for container, set_expected in sorted(containers.items()):
             logging.info("Retrieving stats for %s" % container)
             params = ParametersI()
@@ -235,7 +237,9 @@ def main():
     parser.add_argument("--unknown", action="store_true")
     parser.add_argument("--search", action="store_true")
     parser.add_argument("--images", action="store_true")
-    parser.add_argument("screen", nargs="?")
+    parser.add_argument(
+        "studies", nargs='*',
+        help="Studies to be processed, default all (idr*)")
     parser.add_argument('-v', '--verbose', action='count', default=0)
     ns = parser.parse_args()
 
@@ -252,12 +256,12 @@ def main():
         if ns.orphans:
             orphans(query)
         elif ns.unknown:
-            unknown(query)
+            unknown(query, ns.studies)
         elif ns.search:
             search = client.sf.createSearchService()
             check_search(query, search)
         else:
-            stat_top_level(query)
+            stat_top_level(query, ns.studies)
     finally:
         cli.close()
 
