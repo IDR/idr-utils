@@ -24,80 +24,65 @@ from omero.sys import ParametersI
 
 from yaml import safe_load
 
-PDI_QUERY = (
-    "select p.id, count(distinct d.id), "
-    "       0, count(distinct i.id),"
-    "       sum(cast(pix.sizeZ as long) * pix.sizeT * pix.sizeC), "
-    "       sum(cast(pix.sizeZ as long) * pix.sizeT * pix.sizeC * "
-    "           pix.sizeX * pix.sizeY * 2) "
-    "from Project p "
-    "left outer join p.datasetLinks pdl "
-    "left outer join pdl.child d "
-    "left outer join d.imageLinks as dil "
-    "left outer join dil.child as i "
-    "left outer join i.pixels as pix "
-    "where p.name = :container "
-    "group by p.id")
-
-SPW_QUERY = (
-    "select s.id, count(distinct p.id), "
-    "       count(distinct w.id), count(distinct i.id),"
-    "       sum(cast(pix.sizeZ as long) * pix.sizeT * pix.sizeC), "
-    "       sum(cast(pix.sizeZ as long) * pix.sizeT * pix.sizeC * "
-    "           pix.sizeX * pix.sizeY * 2) "
-    "from Screen s "
-    "left outer join s.plateLinks spl "
-    "left outer join spl.child as p "
-    "left outer join p.wells as w "
-    "left outer join w.wellSamples as ws "
-    "left outer join ws.image as i "
-    "left outer join i.pixels as pix "
-    "where s.name = :container "
-    "group by s.id")
-
-PROJECT_AVG_SIZE_QUERY = """
-      SELECT
+PDI_QUERY = """
+    SELECT
+        p.id,
+        COUNT(DISTINCT d.id),
+        0,
+        COUNT(DISTINCT i.id),
+        SUM(CAST(pix.sizeZ AS long) * pix.sizeT * pix.sizeC),
+        SUM(CAST(pix.sizeZ AS long) * pix.sizeT * pix.sizeC *
+            pix.sizeX * pix.sizeY * 2),
         CONCAT(
-          CAST(ROUND(AVG(pix.sizeX)) as int),
-          ' x ',
-          CAST(ROUND(AVG(pix.sizeY)) as int),
-          ' x ',
-          CAST(ROUND(AVG(pix.sizeZ)) as int),
-          ' x ',
-          CAST(ROUND(AVG(pix.sizeC)) as int),
-          ' x ',
-          CAST(ROUND(AVG(pix.sizeT)) as int)
+            CAST(ROUND(AVG(pix.sizeX)) AS int),
+            ' x ',
+            CAST(ROUND(AVG(pix.sizeY)) AS int),
+            ' x ',
+            CAST(ROUND(AVG(pix.sizeZ)) AS int),
+            ' x ',
+            CAST(ROUND(AVG(pix.sizeC)) AS int),
+            ' x ',
+            CAST(ROUND(AVG(pix.sizeT)) AS int)
         )
-      FROM Project p
-      LEFT OUTER JOIN p.datasetLinks pdl
-      LEFT OUTER JOIN pdl.child d
-      LEFT OUTER JOIN d.imageLinks as dil
-      LEFT OUTER JOIN dil.child as i
-      LEFT OUTER JOIN i.pixels as pix
-      WHERE p.name = :container
+    FROM Project p
+    LEFT OUTER JOIN p.datasetLinks pdl
+    LEFT OUTER JOIN pdl.child d
+    LEFT OUTER JOIN d.imageLinks dil
+    LEFT OUTER JOIN dil.child i
+    LEFT OUTER JOIN i.pixels pix
+    WHERE p.name = :container
+    GROUP BY p.id
 """
 
-SCREEN_AVG_SIZE_QUERY = """
-      SELECT
+SPW_QUERY = """
+    SELECT
+        s.id,
+        COUNT(DISTINCT p.id),
+        COUNT(DISTINCT w.id),
+        COUNT(DISTINCT i.id),
+        SUM(CAST(pix.sizeZ AS long) * pix.sizeT * pix.sizeC),
+        SUM(CAST(pix.sizeZ AS long) * pix.sizeT * pix.sizeC *
+            pix.sizeX * pix.sizeY * 2),
         CONCAT(
-          CAST(ROUND(AVG(pix.sizeX)) as int),
-          ' x ',
-          CAST(ROUND(AVG(pix.sizeY)) as int),
-          ' x ',
-          CAST(ROUND(AVG(pix.sizeZ)) as int),
-          ' x ',
-          CAST(ROUND(AVG(pix.sizeC)) as int),
-          ' x ',
-          CAST(ROUND(AVG(pix.sizeT)) as int)
+            CAST(ROUND(AVG(pix.sizeX)) AS int),
+            ' x ',
+            CAST(ROUND(AVG(pix.sizeY)) AS int),
+            ' x ',
+            CAST(ROUND(AVG(pix.sizeZ)) AS int),
+            ' x ',
+            CAST(ROUND(AVG(pix.sizeC)) AS int),
+            ' x ',
+            CAST(ROUND(AVG(pix.sizeT)) AS int)
         )
-      FROM Screen s
-      LEFT OUTER JOIN s.plateLinks spl
-      LEFT OUTER JOIN spl.child as p
-      LEFT OUTER JOIN p.wells as w
-      LEFT OUTER JOIN w.wellSamples as ws
-      LEFT OUTER JOIN ws.image as i
-      LEFT OUTER JOIN i.pixels as pix
-      WHERE s.name = :container
+    FROM Screen s
+    LEFT OUTER JOIN s.plateLinks spl
+    LEFT OUTER JOIN spl.child p
+    LEFT OUTER JOIN p.wells w
+    LEFT OUTER JOIN w.wellSamples ws
+    LEFT OUTER JOIN ws.image i
+    LEFT OUTER JOIN i.pixels pix
+    WHERE s.name = :container
+    GROUP BY s.id
 """
 
 
@@ -266,19 +251,14 @@ def stat_top_level(query, study_list, printfmt='string'):
             if "Plate" in set_expected:
                 expected = set_expected["Plate"]
                 rv = unwrap(query.projection(SPW_QUERY, params))
-                img_stats = unwrap(query.projection(
-                    SCREEN_AVG_SIZE_QUERY, params))
             elif "Dataset" in set_expected:
                 expected = set_expected["Dataset"]
                 rv = unwrap(query.projection(PDI_QUERY, params))
-                img_stats = unwrap(query.projection(
-                    PROJECT_AVG_SIZE_QUERY, params))
             else:
                 raise Exception("unknown: %s" % list(set_expected.keys()))
             nexpected = len(expected)
 
             container1, container2 = container.split('/', 1)
-            avn_image_dim = img_stats[0][0]
             if not rv:
                 df.loc[len(df)] = (
                     container1,
@@ -296,11 +276,12 @@ def stat_top_level(query, study_list, printfmt='string'):
                     0,
                     files,
                     avg_size,
-                    avn_image_dim,
+                    "",
                 )
             else:
                 for x in rv:
-                    plate_id, plates, wells, images, planes, bytes = x
+                    (plate_id, plates, wells, images, planes, bytes,
+                        avg_image_dim) = x
                     if not planes:
                         planes = 0
                     if not bytes:
@@ -325,7 +306,7 @@ def stat_top_level(query, study_list, printfmt='string'):
                         bytes,
                         files,
                         avg_size,
-                        avn_image_dim,
+                        avg_image_dim,
                     )
 
     totals = df.iloc[:, -12:-2].sum()
