@@ -24,7 +24,7 @@ from omero.sys import ParametersI  # noqa
 from omero.util.text import TableBuilder  # noqa
 from omero.util.text import filesizeformat  # noqa
 
-from yaml import load
+from yaml import safe_load
 
 PDI_QUERY = (
     "select p.id, count(distinct d.id), "
@@ -58,12 +58,14 @@ SPW_QUERY = (
     "group by s.id")
 
 
-def studies():
+def studies(study_list):
     with open("bulk.yml") as f:
-        default_columns = load(f).get("columns", {})
+        default_columns = safe_load(f).get("columns", {})
 
     rv = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-    for study in sorted(glob("idr*")):
+    if not study_list:
+        study_list = sorted(glob("idr*"))
+    for study in study_list:
         if study[-1] == "/":
             study = study[0:-1]
         if "idr0000-" in study or "idr-utils" in study:
@@ -85,7 +87,7 @@ def studies():
             for bulk in bulks:
                 pdir = dirname(bulk)
                 with open(bulk, "r") as f:
-                    y = load(f)
+                    y = safe_load(f)
                 p = join(pdir, y["path"])
                 columns = y.get("columns", default_columns)
                 name_idx = None
@@ -136,9 +138,9 @@ def orphans(query):
     print("Total:", len(orphans), file=stderr)
 
 
-def unknown(query):
+def unknown(query, study_list):
     on_disk = []
-    for study, screens in sorted(studies().items()):
+    for study, screens in sorted(studies(study_list).items()):
         for screen, plates in list(screens.items()):
             on_disk.append(screen)
             on_disk.extend(plates)
@@ -180,7 +182,7 @@ def check_search(query, search):
                 continue
 
 
-def stat_screens(query):
+def stat_top_level(query, study_list):
 
     tb = TableBuilder("Container")
     tb.cols(["ID", "Set", "Wells", "Images", "Planes", "Bytes"])
@@ -191,7 +193,7 @@ def stat_screens(query):
     plane_count = 0
     byte_count = 0
 
-    for study, containers in sorted(studies().items()):
+    for study, containers in sorted(studies(study_list).items()):
         for container, set_expected in sorted(containers.items()):
             logging.info("Retrieving stats for %s" % container)
             params = ParametersI()
@@ -228,80 +230,6 @@ def stat_screens(query):
     print(str(tb.build()))
 
 
-def stat_plates(query, screen, images=False):
-
-    params = ParametersI()
-    params.addString("screen", screen)
-
-    obj = query.findByQuery((
-        "select s from Screen s "
-        "where s.name = :screen"), params)
-
-    if not obj:
-        raise Exception("unknown screen: %s" % screen)
-
-    if images:
-        q = ("select %s from Image i "
-             "join i.wellSamples ws join ws.well w "
-             "join w.plate p join p.screenLinks sl "
-             "join sl.parent s where s.name = :screen")
-
-        limit = 1000
-        found = 0
-        count = unwrap(query.projection(
-            q % "count(distinct i.id)", params
-        ))[0][0]
-        print(count, file=stderr)
-        params.page(0, limit)
-
-        q = q % "distinct i.id"
-        q = "%s order by i.id" % q
-        while count > 0:
-            rv = unwrap(query.projection(q, params))
-            count -= len(rv)
-            found += len(rv)
-            params.page(found, limit)
-            for x in rv:
-                yield x[0]
-        return
-
-    plates = glob(join(screen, "plates", "*"))
-    plates = list(map(basename, plates))
-
-    tb = TableBuilder("Plate")
-    tb.cols(["PID", "Wells", "Images"])
-
-    well_count = 0
-    image_count = 0
-    for plate in plates:
-        params.addString("plate", plate)
-        rv = unwrap(query.projection((
-            "select p.id, count(distinct w.id), count(distinct i.id)"
-            "  from Screen s "
-            "left outer join s.plateLinks spl join spl.child as p "
-            "left outer join p.wells as w "
-            "left outer join w.wellSamples as ws "
-            "left outer join ws.image as i "
-            "where s.name = :screen and p.name = :plate "
-            "group by p.id"), params))
-        if not rv:
-            tb.row(plate, "MISSING", "", "")
-        else:
-            for x in rv:
-                plate_id, wells, images = x
-                well_count += wells
-                image_count += images
-                tb.row(plate, plate_id, wells, images)
-    tb.row("Total", "", well_count, image_count)
-    print(str(tb.build()))
-
-
-def copy(client, copy_from, copy_type, copy_to):
-    gateway = BlitzGateway(client_obj=client)
-    print(gateway.applySettingsToSet(copy_from, copy_type, [copy_to]))
-    gateway.getObject("Image", copy_to).getThumbnail(size=(96,), direct=False)
-
-
 def main():
     parser = Parser()
     parser.add_login_arguments()
@@ -309,10 +237,9 @@ def main():
     parser.add_argument("--unknown", action="store_true")
     parser.add_argument("--search", action="store_true")
     parser.add_argument("--images", action="store_true")
-    parser.add_argument("--copy-from", type=int, default=None)
-    parser.add_argument("--copy-type", default="Image")
-    parser.add_argument("--copy-to", type=int, default=None)
-    parser.add_argument("screen", nargs="?")
+    parser.add_argument(
+        "studies", nargs='*',
+        help="Studies to be processed, default all (idr*)")
     parser.add_argument('-v', '--verbose', action='count', default=0)
     ns = parser.parse_args()
 
@@ -329,18 +256,12 @@ def main():
         if ns.orphans:
             orphans(query)
         elif ns.unknown:
-            unknown(query)
+            unknown(query, ns.studies)
         elif ns.search:
             search = client.sf.createSearchService()
             check_search(query, search)
-        elif not ns.screen:
-            stat_screens(query)
         else:
-            if ns.copy_to:
-                copy(client, ns.copy_from, ns.copy_type, ns.copy_to)
-            else:
-                for x in stat_plates(query, ns.screen, ns.images):
-                    print(x)
+            stat_top_level(query, ns.studies)
     finally:
         cli.close()
 
