@@ -17,8 +17,10 @@ import logging
 
 from omero import all  # noqa
 from omero import ApiUsageException
+from omero.callbacks import CmdCallbackI
 from omero.cli import CLI
 from omero.cli import Parser
+from omero.cmd import DiskUsage2
 from omero.rtypes import unwrap
 from omero.sys import ParametersI
 
@@ -210,8 +212,45 @@ def check_search(query, search):
                 continue
 
 
-def stat_top_level(query, study_list, printfmt='string'):
+def fs_usage(client, objecttype, objectid):
+    req = DiskUsage2()
+    req.targetObjects = {objecttype: [objectid]}
+    req.targetClasses = [objecttype]
+
+    cb = None
+    handle = None
+    try:
+        handle = client.sf.submit(req)
+        cb = CmdCallbackI(client, handle)
+        # Wait for finish
+        while True:
+            found = cb.block(1000)
+            if found:
+                break
+
+        rsp = cb.getResponse()
+        # status = cb.getStatus()
+    except KeyboardInterrupt:
+        # If user uses Ctrl-C, then cancel
+        if handle is not None:
+            logging.warn("Attempting cancel...")
+            if handle.cancel():
+                logging.warn("Cancelled")
+            else:
+                logging.warn("Failed to cancel")
+    finally:
+        if cb is not None:
+            cb.close(True)  # Close handle
+
+    sizebytes = sum(rsp.totalBytesUsed.values())
+    nfiles = sum(rsp.totalFileCount.values())
+    return sizebytes, nfiles
+
+
+def stat_top_level(client, study_list, getfs=False, printfmt='string'):
     # printfmt can be any of the pandas.Dataframe.to_{printfmt} methods
+
+    query = client.sf.getQueryService()
 
     df = pd.DataFrame(columns=(
         "Study",
@@ -242,8 +281,6 @@ def stat_top_level(query, study_list, printfmt='string'):
     experiments = None
     targets = None
     acquisitions = None
-    files = None
-    avg_size = None
 
     for study, containers in sorted(studies(study_list).items()):
         for container, set_expected in sorted(containers.items()):
@@ -251,9 +288,11 @@ def stat_top_level(query, study_list, printfmt='string'):
             params = ParametersI()
             params.addString("container", container)
             if "Plate" in set_expected:
+                parenttype = "Screen"
                 expected = set_expected["Plate"]
                 rv = unwrap(query.projection(SPW_QUERY, params))
             elif "Dataset" in set_expected:
+                parenttype = "Project"
                 expected = set_expected["Dataset"]
                 rv = unwrap(query.projection(PDI_QUERY, params))
             else:
@@ -276,8 +315,8 @@ def stat_top_level(query, study_list, printfmt='string'):
                     0,
                     0,
                     0,
-                    files,
-                    avg_size,
+                    None,
+                    None,
                     "",
                 )
             else:
@@ -292,6 +331,14 @@ def stat_top_level(query, study_list, printfmt='string'):
                         logging.warning(
                             '%s: got %d plates expected %d',
                             container, plates, nexpected)
+                    if getfs:
+                        fs_size, fs_num = fs_usage(
+                            client, parenttype, plate_id)
+                        fs_avg_size = fs_size / fs_num
+                    else:
+                        fs_size = bytes
+                        fs_num = None
+                        fs_avg_size = None
                     df.loc[len(df)] = (
                         container1,
                         container2,
@@ -304,10 +351,10 @@ def stat_top_level(query, study_list, printfmt='string'):
                         acquisitions,
                         images,
                         planes,
-                        bytes / 2 ** 40,
-                        bytes,
-                        files,
-                        avg_size,
+                        fs_size / 2 ** 40,
+                        fs_size,
+                        fs_num,
+                        fs_avg_size,
                         avg_image_dim,
                     )
 
@@ -330,7 +377,10 @@ def main():
     parser.add_argument("--unknown", action="store_true")
     parser.add_argument("--search", action="store_true")
     parser.add_argument("--images", action="store_true")
-    parser.add_argument("--format", default="string", help=(
+    parser.add_argument("--disable-fsusage", action="store_true", help=(
+        "Disable fs usage file size and counts. "
+        "Use this flag if the script is taking too long."))
+    parser.add_argument("--format", default="tsv", help=(
         "Output format, includes 'string', 'csv', 'tsv', and others"))
     parser.add_argument(
         "studies", nargs='*',
@@ -356,7 +406,8 @@ def main():
             search = client.sf.createSearchService()
             check_search(query, search)
         else:
-            stat_top_level(query, ns.studies, ns.format)
+            stat_top_level(
+                client, ns.studies, not ns.disable_fsusage, ns.format)
     finally:
         cli.close()
 
