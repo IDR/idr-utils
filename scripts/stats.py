@@ -247,9 +247,14 @@ def fs_usage(client, objecttype, objectid):
     return sizebytes, nfiles
 
 
-def stat_top_level(client, study_list, getfs=False, printfmt='string'):
-    # printfmt can be any of the pandas.Dataframe.to_{printfmt} methods
-
+def stat_top_level(client, study_list, *, fsusage, append_totals):
+    # Calculate stats for the studies.tsv file.
+    # client: OMERO client
+    # study_list: List of studies
+    # fsusage: If True use the OMERO DiskUsage2 command to get information
+    #   on disk usage, otherwise make a rough guess and ignore other fields
+    # append_totals: If True append an additional row containing totals
+    # Returns a pandas Dataframe that can be used for further analysis
     query = client.sf.getQueryService()
 
     df = pd.DataFrame(columns=(
@@ -331,7 +336,7 @@ def stat_top_level(client, study_list, getfs=False, printfmt='string'):
                         logging.warning(
                             '%s: got %d plates expected %d',
                             container, plates, nexpected)
-                    if getfs:
+                    if fsusage:
                         fs_size, fs_num = fs_usage(
                             client, parenttype, plate_id)
                         fs_avg_size = fs_size / fs_num
@@ -358,15 +363,21 @@ def stat_top_level(client, study_list, getfs=False, printfmt='string'):
                         avg_image_dim,
                     )
 
-    totals = df.iloc[:, -12:-2].sum()
-    df.loc[len(df)] = ["Total", "", "", ""] + totals.to_list() + ["", ""]
+    if append_totals:
+        totals = df.iloc[:, -12:-2].sum()
+        df.loc[len(df)] = ["Total", "", "", ""] + totals.to_list() + ["", ""]
 
-    if printfmt == 'tsv':
-        out = df.to_csv(sep='\t', index=False)
-    elif printfmt in ('json',):
-        out = getattr(df, f'to_{printfmt}')()
+    return df
+
+
+def print_stats(df, fmt):
+    # fmt can be any of the pandas.Dataframe.to_{printfmt} methods
+    if fmt == 'tsv':
+        out = df.to_csv(sep='\t', header=False, index=False)
+    elif fmt in ('json',):
+        out = getattr(df, f'to_{fmt}')()
     else:
-        out = getattr(df, f'to_{printfmt}')(index=False)
+        out = getattr(df, f'to_{fmt}')(index=False)
     print(out)
 
 
@@ -381,7 +392,12 @@ def main():
         "Disable fs usage file size and counts. "
         "Use this flag if the script is taking too long."))
     parser.add_argument("--format", default="tsv", help=(
-        "Output format, includes 'string', 'csv', 'tsv', and others"))
+        "Output format, includes 'string', 'csv', 'tsv' (default), and "
+        "others. "
+        "'tsv' can be appended to the IDR studies.csv file with no further "
+        "processing. "
+        "'string' is the most human readable (fixed width columns). "
+        "All other formats include headers and totals."))
     parser.add_argument(
         "studies", nargs='*',
         help="Studies to be processed, default all (idr*)")
@@ -406,8 +422,11 @@ def main():
             search = client.sf.createSearchService()
             check_search(query, search)
         else:
-            stat_top_level(
-                client, ns.studies, not ns.disable_fsusage, ns.format)
+            df = stat_top_level(
+                client, ns.studies,
+                fsusage=(not ns.disable_fsusage),
+                append_totals=(ns.format != 'tsv'))
+            print_stats(df, ns.format)
     finally:
         cli.close()
 
