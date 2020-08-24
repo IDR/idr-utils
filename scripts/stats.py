@@ -339,10 +339,12 @@ def stat_top_level(client, study_list, *, fsusage, append_totals):
                     if fsusage:
                         fs_size, fs_num = fs_usage(
                             client, parenttype, plate_id)
-                        fs_avg_size = fs_size / fs_num
                     else:
                         fs_size = bytes
                         fs_num = None
+                    if fs_num:
+                        fs_avg_size = fs_size / fs_num
+                    else:
                         fs_avg_size = None
                     df.loc[len(df)] = (
                         container1,
