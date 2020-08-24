@@ -215,7 +215,6 @@ def check_search(query, search):
 def fs_usage(client, objecttype, objectid):
     req = DiskUsage2()
     req.targetObjects = {objecttype: [objectid]}
-    req.targetClasses = [objecttype]
 
     cb = None
     handle = None
