@@ -233,11 +233,11 @@ def fs_usage(client, objecttype, objectid):
     except KeyboardInterrupt:
         # If user uses Ctrl-C, then cancel
         if handle is not None:
-            logging.warn("Attempting cancel...")
+            logging.warning("Attempting cancel...")
             if handle.cancel():
-                logging.warn("Cancelled")
+                logging.warning("Cancelled")
             else:
-                logging.warn("Failed to cancel")
+                logging.warning("Failed to cancel")
     finally:
         if cb is not None:
             cb.close(True)  # Close handle
@@ -396,8 +396,9 @@ def main():
         "others. "
         "'tsv' can be appended to the IDR studies.csv file with no further "
         "processing. "
+        "All other formats include headers and totals. "
         "'string' is the most human readable (fixed width columns). "
-        "All other formats include headers and totals."))
+    ))
     parser.add_argument(
         "studies", nargs='*',
         help="Studies to be processed, default all (idr*)")
