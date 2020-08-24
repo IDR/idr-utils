@@ -261,7 +261,7 @@ def stat_top_level(client, study_list, *, fsusage, append_totals):
         "Container",
         "Introduced",
         "ID",  # "Internal ID"
-        "Set",
+        "Set",  # Number of plates or datasets
         "Wells",
         "Experiments",
         #    (wells for screens, imaging experiments for non-screens)",
@@ -325,19 +325,26 @@ def stat_top_level(client, study_list, *, fsusage, append_totals):
                 )
             else:
                 for x in rv:
-                    (plate_id, plates, wells, images, planes, bytes,
-                        avg_image_dim) = x
+                    (
+                        plate_or_dataset_id,
+                        plate_or_datasets,
+                        wells,
+                        images,
+                        planes,
+                        bytes,
+                        avg_image_dim
+                    ) = x
                     if not planes:
                         planes = 0
                     if not bytes:
                         bytes = 0
-                    if plates != nexpected:
+                    if plate_or_datasets != nexpected:
                         logging.warning(
-                            '%s: got %d plates expected %d',
-                            container, plates, nexpected)
+                            '%s: got %d plate/datasets expected %d',
+                            container, plate_or_datasets, nexpected)
                     if fsusage:
                         fs_size, fs_num = fs_usage(
-                            client, parenttype, plate_id)
+                            client, parenttype, plate_or_dataset_id)
                     else:
                         fs_size = bytes
                         fs_num = None
@@ -349,7 +356,7 @@ def stat_top_level(client, study_list, *, fsusage, append_totals):
                         container1,
                         container2,
                         introduced,
-                        plate_id,
+                        plate_or_dataset_id,
                         nexpected,
                         wells,
                         experiments,
