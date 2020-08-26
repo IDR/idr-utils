@@ -31,6 +31,7 @@ PDI_QUERY = """
         p.id,
         COUNT(DISTINCT d.id),
         0,
+        0,
         COUNT(DISTINCT i.id),
         SUM(CAST(pix.sizeZ AS long) * pix.sizeT * pix.sizeC),
         SUM(CAST(pix.sizeZ AS long) * pix.sizeT * pix.sizeC *
@@ -61,6 +62,7 @@ SPW_QUERY = """
         s.id,
         COUNT(DISTINCT p.id),
         COUNT(DISTINCT w.id),
+        COUNT(DISTINCT pa.id),
         COUNT(DISTINCT i.id),
         SUM(CAST(pix.sizeZ AS long) * pix.sizeT * pix.sizeC),
         SUM(CAST(pix.sizeZ AS long) * pix.sizeT * pix.sizeC *
@@ -81,6 +83,7 @@ SPW_QUERY = """
     LEFT OUTER JOIN spl.child p
     LEFT OUTER JOIN p.wells w
     LEFT OUTER JOIN w.wellSamples ws
+    LEFT OUTER JOIN ws.plateAcquisition pa
     LEFT OUTER JOIN ws.image i
     LEFT OUTER JOIN i.pixels pix
     WHERE s.name = :container
@@ -274,17 +277,16 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
         "Acquisitions",
         "Images",  # "5D Images"
         "Planes",
-        "Size (TB)",  # TODO: from fs usage
-        "Bytes",  # "Size"  # TODO: from fs usage
-        "# of Files",  # TODO: from fs usage
-        "avg. size (MB)",  # TODO: from fs usage
+        "Size (TB)",
+        "Bytes",  # "Size"
+        "# of Files",
+        "avg. size (MB)",
         "Avg. Image Dim (XYZCT)",
     ))
 
     # Placeholders:
     experiments = None
     targets = None
-    acquisitions = None
 
     for study, containers in sorted(studies(study_list).items()):
         for container, set_expected in sorted(containers.items()):
@@ -314,7 +316,7 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
                     0,
                     experiments,
                     targets,
-                    acquisitions,
+                    0,
                     0,
                     0,
                     0,
@@ -329,6 +331,7 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
                         plate_or_dataset_id,
                         plate_or_datasets,
                         wells,
+                        acquisitions,
                         images,
                         planes,
                         bytes,
