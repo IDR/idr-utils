@@ -246,9 +246,10 @@ def fs_usage(client, objecttype, objectid):
     return sizebytes, nfiles
 
 
-def stat_top_level(client, study_list, *, fsusage, append_totals):
+def stat_top_level(client, study_list, *, release, fsusage, append_totals):
     # Calculate stats for the studies.tsv file.
     # client: OMERO client
+    # release: THe name of the IDR release
     # study_list: List of studies
     # fsusage: If True use the OMERO DiskUsage2 command to get information
     #   on disk usage, otherwise make a rough guess and ignore other fields
@@ -281,7 +282,6 @@ def stat_top_level(client, study_list, *, fsusage, append_totals):
     ))
 
     # Placeholders:
-    introduced = ""
     experiments = None
     targets = None
     acquisitions = None
@@ -308,7 +308,7 @@ def stat_top_level(client, study_list, *, fsusage, append_totals):
                 df.loc[len(df)] = (
                     container1,
                     container2,
-                    introduced,
+                    release,
                     "MISSING",
                     0,
                     0,
@@ -355,7 +355,7 @@ def stat_top_level(client, study_list, *, fsusage, append_totals):
                     df.loc[len(df)] = (
                         container1,
                         container2,
-                        introduced,
+                        release,
                         plate_or_dataset_id,
                         nexpected,
                         wells,
@@ -396,12 +396,14 @@ def main():
     parser.add_argument("--unknown", action="store_true")
     parser.add_argument("--search", action="store_true")
     parser.add_argument("--images", action="store_true")
+    parser.add_argument("--release", default="TODO",
+                        help="The name of the release, e.g. 'prod88'")
     parser.add_argument("--disable-fsusage", action="store_true", help=(
         "Disable fs usage file size and counts. "
         "Use this flag if the script is taking too long."))
     parser.add_argument("--format", default="tsv", help=(
         "Output format, includes 'string', 'csv', 'tsv' (default), and "
-        "others. "
+        "'json'. "
         "'tsv' can be appended to the IDR studies.csv file with no further "
         "processing. "
         "All other formats include headers and totals. "
@@ -433,6 +435,7 @@ def main():
         else:
             df = stat_top_level(
                 client, ns.studies,
+                release=ns.release,
                 fsusage=(not ns.disable_fsusage),
                 append_totals=(ns.format != 'tsv'))
             print_stats(df, ns.format)
