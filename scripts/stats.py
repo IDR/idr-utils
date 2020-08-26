@@ -352,7 +352,7 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
                         fs_size = bytes
                         fs_num = None
                     if fs_num:
-                        fs_avg_size = fs_size / fs_num
+                        fs_avg_size = fs_size / fs_num / (10 ** 6)
                     else:
                         fs_avg_size = None
                     df.loc[len(df)] = (
@@ -370,7 +370,7 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
                         fs_size / (10 ** 12),
                         fs_size,
                         fs_num,
-                        fs_avg_size / (10 ** 6),
+                        fs_avg_size,
                         avg_image_dim,
                     )
 
