@@ -364,10 +364,10 @@ def stat_top_level(client, study_list, *, fsusage, append_totals):
                         acquisitions,
                         images,
                         planes,
-                        fs_size / 2 ** 40,
+                        fs_size / (10 ** 12),
                         fs_size,
                         fs_num,
-                        fs_avg_size,
+                        fs_avg_size / (10 ** 6),
                         avg_image_dim,
                     )
 
