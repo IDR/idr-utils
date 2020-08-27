@@ -10,52 +10,85 @@ from os.path import basename
 from os.path import dirname
 from os.path import exists
 from os.path import join
+import pandas as pd
 from sys import stderr
 import logging
 
 
 from omero import all  # noqa
-from omero import ApiUsageException  # noqa
-from omero.cli import CLI  # noqa
-from omero.cli import Parser  # noqa
-from omero.gateway import BlitzGateway  # noqa
-from omero.rtypes import unwrap  # noqa
-from omero.sys import ParametersI  # noqa
-from omero.util.text import TableBuilder  # noqa
-from omero.util.text import filesizeformat  # noqa
+from omero import ApiUsageException
+from omero.callbacks import CmdCallbackI
+from omero.cli import CLI
+from omero.cli import Parser
+from omero.cmd import DiskUsage2
+from omero.rtypes import unwrap
+from omero.sys import ParametersI
 
 from yaml import safe_load
 
-PDI_QUERY = (
-    "select p.id, count(distinct d.id), "
-    "       0, count(distinct i.id),"
-    "       sum(cast(pix.sizeZ as long) * pix.sizeT * pix.sizeC), "
-    "       sum(cast(pix.sizeZ as long) * pix.sizeT * pix.sizeC * "
-    "           pix.sizeX * pix.sizeY * 2) "
-    "from Project p "
-    "left outer join p.datasetLinks pdl "
-    "left outer join pdl.child d "
-    "left outer join d.imageLinks as dil "
-    "left outer join dil.child as i "
-    "left outer join i.pixels as pix "
-    "where p.name = :container "
-    "group by p.id")
+PDI_QUERY = """
+    SELECT
+        p.id,
+        COUNT(DISTINCT d.id),
+        0,
+        0,
+        COUNT(DISTINCT i.id),
+        SUM(CAST(pix.sizeZ AS long) * pix.sizeT * pix.sizeC),
+        SUM(CAST(pix.sizeZ AS long) * pix.sizeT * pix.sizeC *
+            pix.sizeX * pix.sizeY * 2),
+        CONCAT(
+            CAST(ROUND(AVG(pix.sizeX)) AS int),
+            ' x ',
+            CAST(ROUND(AVG(pix.sizeY)) AS int),
+            ' x ',
+            CAST(ROUND(AVG(pix.sizeZ)) AS int),
+            ' x ',
+            CAST(ROUND(AVG(pix.sizeC)) AS int),
+            ' x ',
+            CAST(ROUND(AVG(pix.sizeT)) AS int)
+        )
+    FROM Project p
+    LEFT OUTER JOIN p.datasetLinks pdl
+    LEFT OUTER JOIN pdl.child d
+    LEFT OUTER JOIN d.imageLinks dil
+    LEFT OUTER JOIN dil.child i
+    LEFT OUTER JOIN i.pixels pix
+    WHERE p.name = :container
+    GROUP BY p.id
+"""
 
-SPW_QUERY = (
-    "select s.id, count(distinct p.id), "
-    "       count(distinct w.id), count(distinct i.id),"
-    "       sum(cast(pix.sizeZ as long) * pix.sizeT * pix.sizeC), "
-    "       sum(cast(pix.sizeZ as long) * pix.sizeT * pix.sizeC * "
-    "           pix.sizeX * pix.sizeY * 2) "
-    "from Screen s "
-    "left outer join s.plateLinks spl "
-    "left outer join spl.child as p "
-    "left outer join p.wells as w "
-    "left outer join w.wellSamples as ws "
-    "left outer join ws.image as i "
-    "left outer join i.pixels as pix "
-    "where s.name = :container "
-    "group by s.id")
+SPW_QUERY = """
+    SELECT
+        s.id,
+        COUNT(DISTINCT p.id),
+        COUNT(DISTINCT w.id),
+        COUNT(DISTINCT pa.id),
+        COUNT(DISTINCT i.id),
+        SUM(CAST(pix.sizeZ AS long) * pix.sizeT * pix.sizeC),
+        SUM(CAST(pix.sizeZ AS long) * pix.sizeT * pix.sizeC *
+            pix.sizeX * pix.sizeY * 2),
+        CONCAT(
+            CAST(ROUND(AVG(pix.sizeX)) AS int),
+            ' x ',
+            CAST(ROUND(AVG(pix.sizeY)) AS int),
+            ' x ',
+            CAST(ROUND(AVG(pix.sizeZ)) AS int),
+            ' x ',
+            CAST(ROUND(AVG(pix.sizeC)) AS int),
+            ' x ',
+            CAST(ROUND(AVG(pix.sizeT)) AS int)
+        )
+    FROM Screen s
+    LEFT OUTER JOIN s.plateLinks spl
+    LEFT OUTER JOIN spl.child p
+    LEFT OUTER JOIN p.wells w
+    LEFT OUTER JOIN w.wellSamples ws
+    LEFT OUTER JOIN ws.plateAcquisition pa
+    LEFT OUTER JOIN ws.image i
+    LEFT OUTER JOIN i.pixels pix
+    WHERE s.name = :container
+    GROUP BY s.id
+"""
 
 
 def studies(study_list):
@@ -182,16 +215,78 @@ def check_search(query, search):
                 continue
 
 
-def stat_top_level(query, study_list):
+def fs_usage(client, objecttype, objectid):
+    req = DiskUsage2()
+    req.targetObjects = {objecttype: [objectid]}
 
-    tb = TableBuilder("Container")
-    tb.cols(["ID", "Set", "Wells", "Images", "Planes", "Bytes"])
+    cb = None
+    handle = None
+    try:
+        handle = client.sf.submit(req)
+        cb = CmdCallbackI(client, handle)
+        # Wait for finish
+        while True:
+            found = cb.block(1000)
+            if found:
+                break
 
-    plate_count = 0
-    well_count = 0
-    image_count = 0
-    plane_count = 0
-    byte_count = 0
+        rsp = cb.getResponse()
+        # status = cb.getStatus()
+    except KeyboardInterrupt:
+        # If user uses Ctrl-C, then cancel
+        if handle is not None:
+            logging.warning("Attempting cancel...")
+            if handle.cancel():
+                logging.warning("Cancelled")
+            else:
+                logging.warning("Failed to cancel")
+    finally:
+        if cb is not None:
+            cb.close(True)  # Close handle
+
+    sizebytes = sum(rsp.totalBytesUsed.values())
+    nfiles = sum(rsp.totalFileCount.values())
+    return sizebytes, nfiles
+
+
+def stat_top_level(client, study_list, *, release, fsusage, append_totals):
+    # Calculate stats for the studies.tsv file.
+    # client: OMERO client
+    # release: THe name of the IDR release
+    # study_list: List of studies
+    # fsusage: If True use the OMERO DiskUsage2 command to get information
+    #   on disk usage, otherwise make a rough guess and ignore other fields
+    # append_totals: If True append an additional row containing totals
+    # Returns a pandas Dataframe that can be used for further analysis
+    query = client.sf.getQueryService()
+
+    df = pd.DataFrame(columns=(
+        "Study",
+        "Container",
+        "Introduced",
+        "ID",  # "Internal ID"
+        "Set",  # Number of plates or datasets
+        "Wells",
+        "Experiments",
+        #    (wells for screens, imaging experiments for non-screens)",
+        #    TODO: remove
+        "Targets",
+        #    (genes, small molecules, geographic locations, or combination of
+        #    factors (idr0019, 26, 34, 38)",
+        #    TODO: remove
+        "Acquisitions",
+        "Images",  # "5D Images"
+        "Planes",
+        "Size (TB)",
+        "Bytes",  # "Size"
+        "# of Files",
+        "avg. size (MB)",
+        "Avg. Image Dim (XYZCT)",
+    ))
+
+    # Placeholders:
+    experiments = None
+    targets = None
 
     for study, containers in sorted(studies(study_list).items()):
         for container, set_expected in sorted(containers.items()):
@@ -199,35 +294,102 @@ def stat_top_level(query, study_list):
             params = ParametersI()
             params.addString("container", container)
             if "Plate" in set_expected:
+                parenttype = "Screen"
                 expected = set_expected["Plate"]
                 rv = unwrap(query.projection(SPW_QUERY, params))
             elif "Dataset" in set_expected:
+                parenttype = "Project"
                 expected = set_expected["Dataset"]
                 rv = unwrap(query.projection(PDI_QUERY, params))
             else:
                 raise Exception("unknown: %s" % list(set_expected.keys()))
+            nexpected = len(expected)
 
+            container1, container2 = container.split('/', 1)
             if not rv:
-                tb.row(container, "MISSING", "", "", "", "", "")
+                df.loc[len(df)] = (
+                    container1,
+                    container2,
+                    release,
+                    "MISSING",
+                    0,
+                    0,
+                    experiments,
+                    targets,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    None,
+                    None,
+                    "",
+                )
             else:
                 for x in rv:
-                    plate_id, plates, wells, images, planes, bytes = x
-                    plate_count += plates
-                    well_count += wells
-                    image_count += images
-                    if planes:
-                        plane_count += planes
-                    if bytes:
-                        byte_count += bytes
-                    else:
+                    (
+                        plate_or_dataset_id,
+                        plate_or_datasets,
+                        wells,
+                        acquisitions,
+                        images,
+                        planes,
+                        bytes,
+                        avg_image_dim
+                    ) = x
+                    if not planes:
+                        planes = 0
+                    if not bytes:
                         bytes = 0
-                    if plates != len(expected):
-                        plates = "%s of %s" % (plates, len(expected))
-                    tb.row(container, plate_id, plates, wells, images, planes,
-                           filesizeformat(bytes))
-    tb.row("Total", "", plate_count, well_count, image_count, plane_count,
-           filesizeformat(byte_count))
-    print(str(tb.build()))
+                    if plate_or_datasets != nexpected:
+                        logging.warning(
+                            '%s: got %d plate/datasets expected %d',
+                            container, plate_or_datasets, nexpected)
+                    if fsusage:
+                        fs_size, fs_num = fs_usage(
+                            client, parenttype, plate_or_dataset_id)
+                    else:
+                        fs_size = bytes
+                        fs_num = None
+                    if fs_num:
+                        fs_avg_size = fs_size / fs_num / (10 ** 6)
+                    else:
+                        fs_avg_size = None
+                    df.loc[len(df)] = (
+                        container1,
+                        container2,
+                        release,
+                        plate_or_dataset_id,
+                        nexpected,
+                        wells,
+                        experiments,
+                        targets,
+                        acquisitions,
+                        images,
+                        planes,
+                        fs_size / (10 ** 12),
+                        fs_size,
+                        fs_num,
+                        fs_avg_size,
+                        avg_image_dim,
+                    )
+
+    if append_totals:
+        totals = df.iloc[:, -12:-2].sum()
+        df.loc[len(df)] = ["Total", "", "", ""] + totals.to_list() + ["", ""]
+
+    return df
+
+
+def print_stats(df, fmt):
+    # fmt can be any of the pandas.Dataframe.to_{printfmt} methods
+    if fmt == 'tsv':
+        out = df.to_csv(sep='\t', header=False, index=False)
+    elif fmt in ('json',):
+        out = getattr(df, f'to_{fmt}')()
+    else:
+        out = getattr(df, f'to_{fmt}')(index=False)
+    print(out)
 
 
 def main():
@@ -237,6 +399,19 @@ def main():
     parser.add_argument("--unknown", action="store_true")
     parser.add_argument("--search", action="store_true")
     parser.add_argument("--images", action="store_true")
+    parser.add_argument("--release", default="TODO",
+                        help="The name of the release, e.g. 'prod88'")
+    parser.add_argument("--disable-fsusage", action="store_true", help=(
+        "Disable fs usage file size and counts. "
+        "Use this flag if the script is taking too long."))
+    parser.add_argument("--format", default="tsv", help=(
+        "Output format, includes 'string', 'csv', 'tsv' (default), and "
+        "'json'. "
+        "'tsv' can be appended to the IDR studies.csv file with no further "
+        "processing. "
+        "All other formats include headers and totals. "
+        "'string' is the most human readable (fixed width columns). "
+    ))
     parser.add_argument(
         "studies", nargs='*',
         help="Studies to be processed, default all (idr*)")
@@ -261,7 +436,12 @@ def main():
             search = client.sf.createSearchService()
             check_search(query, search)
         else:
-            stat_top_level(query, ns.studies)
+            df = stat_top_level(
+                client, ns.studies,
+                release=ns.release,
+                fsusage=(not ns.disable_fsusage),
+                append_totals=(ns.format != 'tsv'))
+            print_stats(df, ns.format)
     finally:
         cli.close()
 
