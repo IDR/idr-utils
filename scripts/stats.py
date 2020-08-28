@@ -342,10 +342,11 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
                     if not bytes:
                         bytes = 0
                     if plate_or_datasets != nexpected:
-                        logging.warning(
+                        logging.debug(
                             '%s: got %d plate/datasets expected %d',
                             container, plate_or_datasets, nexpected)
                     if fsusage:
+                        logging.debug('Computing disk usage')
                         fs_size, fs_num = fs_usage(
                             client, parenttype, plate_or_dataset_id)
                     else:
@@ -360,7 +361,7 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
                         container2,
                         release,
                         plate_or_dataset_id,
-                        nexpected,
+                        plate_or_datasets,
                         wells,
                         experiments,
                         targets,
