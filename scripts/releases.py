@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os.path
 import pandas as pd
 
 
@@ -42,10 +43,15 @@ def create_release_stats(studies_file, release=None, date=None, size=None):
     return(df)
 
 
-def print_release_stats(df, fmt):
+def print_release_stats(df, fmt, target=None):
     # fmt can be any of the pandas.Dataframe.to_{printfmt} methods
     if fmt == 'tsv':
-        out = df.to_csv(sep='\t', header=False, index=False)
+        if target:
+            out = df.to_csv(
+                target, sep='\t', mode='a', header=False, index=False)
+            return
+        else:
+            out = df.to_csv(sep='\t', header=False, index=False)
     elif fmt in ('json',):
         out = getattr(df, f'to_{fmt}')()
     else:
@@ -89,7 +95,12 @@ def main():
     df = create_release_stats(
         ns.studies_file, release=ns.release, date=ns.release_date,
         size=ns.db_size)
-    print_release_stats(df, ns.format)
+    releases_file = os.path.join(
+        os.path.dirname(ns.studies_file), 'releases.tsv')
+    if os.path.exists(releases_file):
+        print_release_stats(df, ns.format, target=releases_file)
+    else:
+        print_release_stats(df, ns.format)
 
 
 if __name__ == "__main__":
