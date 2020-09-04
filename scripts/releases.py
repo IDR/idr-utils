@@ -79,7 +79,7 @@ def main():
         "Output format, includes 'string', 'csv', 'tsv' (default), and "
         "'json'. "
         "All other formats include headers and totals. "
-        "'string' is the most human-readable (fixed width columns)."
+        "'string' is the most human-readable (fixed width columns). "
         "If tsv is selected and a file called releases.tsv exists in the "
         "same directory as the file specified by studies_file, the output "
         "will be appended to this file."
