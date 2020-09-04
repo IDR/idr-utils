@@ -73,7 +73,7 @@ def main():
     parser.add_argument(
         "--release-date", default=None, help="Date of the release")
     parser.add_argument(
-        "--db-size", default=None, help="Size of the database for the release")
+        "--db-size", default=None, help="Size of the database for the release in GB")
     parser.add_argument("--format", default="tsv", help=(
         "Output format, includes 'string', 'csv', 'tsv' (default), and "
         "'json'. "
