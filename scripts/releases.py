@@ -83,7 +83,6 @@ def main():
         "If tsv is selected and a file called releases.tsv exists in the "
         "same directory as the file specified by studies_file, the output "
         "will be appended to this file."
-        "'string' is the most human-readable (fixed width columns)."
     ))
     parser.add_argument('-v', '--verbose', action='count', default=0)
     parser.add_argument(
