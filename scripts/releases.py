@@ -80,7 +80,7 @@ def main():
         "'tsv' can be appended to the IDR studies.csv file with no further "
         "processing. "
         "All other formats include headers and totals. "
-        "'string' is the most human readable (fixed width columns). "
+        "'string' is the most human-readable (fixed width columns)."
     ))
     parser.add_argument('-v', '--verbose', action='count', default=0)
     parser.add_argument(
