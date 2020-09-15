@@ -91,9 +91,7 @@ SPW_QUERY = """
 """
 
 
-def studies(study_list):
-    with open("bulk.yml") as f:
-        default_columns = safe_load(f).get("columns", {})
+def studies(study_list, default_columns=["name", "path"]):
 
     rv = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     if not study_list:
