@@ -13,7 +13,7 @@ log = logging.getLogger()
 GENE_URL_KEY = 'Gene Identifier URL'
 YEASTGENOME_URL = 'www.yeastgenome.org'
 PATTERN = re.compile(
-    f'^https?://{YEASTGENOME_URL}/locus/(?P<gene>[\w-]+)(?:/overview)?$')
+    fr'^https?://{YEASTGENOME_URL}/locus/(?P<gene>[\w-]+)(?:/overview)?$')
 
 
 def find_yeast_genes(conn):
@@ -27,9 +27,9 @@ def find_yeast_genes(conn):
     return genes
 
 
-def chunks(l, n):
-    for i in range(0, len(l), n):
-        yield l[i:i+n]
+def chunks(elements, batch):
+    for i in range(0, len(elements), batch):
+        yield elements[i:i+batch]
 
 
 def update_yeastgenome_urls(genes):
