@@ -20,7 +20,7 @@ def find_yeast_genes(conn):
     query = ("select distinct m from MapAnnotation m "
              "join m.mapValue mv "
              "where m.ns='openmicroscopy.org/mapr/gene'"
-             f" and mv.value like 'http://{YEASTGENOME_URL}%'")
+             f" and mv.value like '%{YEASTGENOME_URL}%'")
     genes = conn.getQueryService().findAllByQuery(
         query, None, conn.SERVICE_OPTS)
     log.info("Found %s yeast genes" % len(genes))
@@ -51,11 +51,11 @@ def update_yeastgenome_urls(genes):
 
             r = PATTERN.match(value)
             if not r:
-                log.error("Not a yeast genome URL")
+                log.error("Invalid yeast genome URL")
             else:
-                gene = r.group('gene')
+                gene_name = r.group('gene')
                 new_pairs.append(
-                    (key, f"https://{YEASTGENOME_URL}/locus/{gene}"))
+                    (key, f"https://{YEASTGENOME_URL}/locus/{gene_name}"))
 
         if new_pairs != old_pairs:
             mapValue = [omero.model.NamedValue(x[0], x[1]) for x in new_pairs]
