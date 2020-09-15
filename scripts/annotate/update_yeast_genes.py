@@ -44,7 +44,7 @@ def update_yeastgenome_urls(genes):
                 continue
 
             if found_gene_url_key:
-                log.info("Removing duplicate Gene URL key")
+                log.info(f"Removing duplicate Gene URL key: {value}")
                 continue
             else:
                 found_gene_url_key = True
