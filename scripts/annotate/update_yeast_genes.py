@@ -51,7 +51,7 @@ def update_yeastgenome_urls(genes):
 
             r = PATTERN.match(value)
             if not r:
-                log.error("Invalid yeast genome URL")
+                log.error(f"Invalid yeast genome URL: {value}")
             else:
                 gene_name = r.group('gene')
                 new_pairs.append(
