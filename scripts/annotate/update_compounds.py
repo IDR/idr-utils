@@ -77,9 +77,10 @@ def update_compound_urls(compounds, primary_url="PubChem"):
         if primary_url in urls:
             new_pairs.append((COMPOUND_URL_KEY, urls[primary_url]))
         else:
-            new_pairs.append((COMPOUND_URL_KEY, urls.values()[0]))
+            new_pairs.append((COMPOUND_URL_KEY, next(iter(urls.values()))))
 
         if new_pairs != old_pairs:
+            log.debug(f"Updating {old_pairs} to {new_pairs}")
             mapValue = [omero.model.NamedValue(x[0], x[1]) for x in new_pairs]
             compound.setMapValue(mapValue)
             updated_compounds.append(compound)
