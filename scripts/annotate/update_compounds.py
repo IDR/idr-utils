@@ -41,17 +41,14 @@ def chunks(elements, batch):
         yield elements[i:i+batch]
 
 
-def update_compound_urls(compounds):
+def update_compound_urls(compounds, primary_url="PubChem"):
     updated_compounds = []
     for compound in compounds:
         old_pairs = [(kv.name, kv.value) for kv in compound.getMapValue()]
-        new_pairs = []
-        cid_url = None
-        name_url = None
+        urls = {}
         name = ""
         for (key, value) in old_pairs:
             if key == COMPOUND_NAME_KEY:
-                new_pairs.append((key, value))
                 name = value
                 continue
 
@@ -60,25 +57,27 @@ def update_compound_urls(compounds):
                 continue
 
             if CID_PATTERN.match(value):
-                if cid_url is not None:
-                    log.error(
-                        f"Mismatching URLs for {name}: {value} vs {cid_url}")
+                if 'PubChem' in urls:
+                    url = urls["PubChem"]
+                    log.error(f"Mismatching URLs for {name}: {value} vs {url}")
                     continue
                 else:
-                    cid_url = value
+                    urls['PubChem'] = value
             elif NAME_PATTERN.match(value):
-                if name_url is not None:
-                    log.error(f"Mismatching URLs: {value}, {name_url}")
+                if 'NCBI' in urls:
+                    url = urls["NCBI"]
+                    log.error(f"Mismatching URLs for {name}: {value} vs {url}")
                     continue
                 else:
-                    name_url = value
+                    urls['NCBI'] = value
             else:
                 log.error(f'Unrecognized URL for {name}: {value}')
 
-        if cid_url is not None:
-            new_pairs.append((COMPOUND_URL_KEY, cid_url))
-        elif name_url is not None:
-            new_pairs.append((COMPOUND_URL_KEY, name_url))
+        new_pairs = [(COMPOUND_NAME_KEY, name)]
+        if primary_url in urls:
+            new_pairs.append((COMPOUND_URL_KEY, urls[primary_url]))
+        else:
+            new_pairs.append((COMPOUND_URL_KEY, urls.values()[0]))
 
         if new_pairs != old_pairs:
             mapValue = [omero.model.NamedValue(x[0], x[1]) for x in new_pairs]
@@ -100,6 +99,9 @@ def main(argv):
     parser.add_argument(
         '--batch', type=int, default=500,
         help='Number of compounds to update in batch')
+    parser.add_argument(
+        '--primary-url', choices=['PubChem', 'NCBI'],
+        help='Primary URL to use')
     parser.add_argument('--dry-run', '-n', action='store_true')
     args = parser.parse_args(argv)
 
@@ -108,7 +110,8 @@ def main(argv):
     with omero.cli.cli_login() as c:
         conn = omero.gateway.BlitzGateway(client_obj=c.get_client())
         compounds = find_pubchem_compounds(conn)
-        updated_compounds = update_compound_urls(compounds)
+        updated_compounds = update_compound_urls(
+            compounds, primary_url=args.primary_url)
         if not args.dry_run:
             for compounds in chunks(updated_compounds, args.batch):
                 log.info("Updating batch of %s compounds" % len(compounds))
