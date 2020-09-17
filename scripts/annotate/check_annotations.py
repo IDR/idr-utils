@@ -125,15 +125,16 @@ elif screenId:
         sys.exit(1)
     for pl in screen.listChildren():
         for well in pl.listChildren():
-            if csv_data:
-                key = "{}-{}".format(pl.getName(), well.getWellPos())
-                if key not in csv_data:
-                    print_missing(pl.getName(), well.getWellPos())
+            if well.getWellSample():
+                if csv_data:
+                    key = "{}-{}".format(pl.getName(), well.getWellPos())
+                    if key not in csv_data:
+                        print_missing(pl.getName(), well.getWellPos())
+                    else:
+                        csv_data.remove(key)
                 else:
-                    csv_data.remove(key)
-            else:
-                if not check_annotations(well.listAnnotations()):
-                    print_missing(pl.getName(), well.getWellPos())
+                    if not check_annotations(well.listAnnotations()):
+                        print_missing(pl.getName(), well.getWellPos())
 
 conn.close()
 
@@ -145,6 +146,6 @@ if csv_data:
 
 if not missing:
     print("All images have annotations.")
-    exit(0)
+    sys.exit(0)
 else:
-    exit(1)
+    sys.exit(1)
