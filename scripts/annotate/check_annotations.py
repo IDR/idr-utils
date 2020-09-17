@@ -56,11 +56,19 @@ if annoFile:
     df = pandas.read_csv(annoFile)
     if projectId:
         for index, row in df.iterrows():
-            csv_data.add("{}-{}".format(row["Dataset Name"],
-                                        row["Image Name"]))
+            key = "{}-{}".format(row["Dataset Name"],
+                                 row["Image Name"])
+            if key in csv_data:
+                print("Warning: Duplicate entry for image {} in dataset {}."
+                      .format(row["Image Name"], row["Dataset Name"]))
+            csv_data.add(key)
     elif screenId:
         for index, row in df.iterrows():
-            csv_data.add("{}-{}".format(row["Plate"], row["Well"]))
+            key = "{}-{}".format(row["Plate"], row["Well"])
+            if key in csv_data:
+                print("Warning: Duplicate entry for well {} in plate {}."
+                      .format(row["Well"], row["Plate"]))
+            csv_data.add(key)
 
 
 conn = BlitzGateway(os.environ.get('OMERO_USER', 'public'),
