@@ -1,12 +1,13 @@
 from omero.gateway import BlitzGateway
 from omero.model import MapAnnotationI
+import argparse
+import logging
 import pandas
 import sys
 import os
 
 
-def printusage():
-    print('''
+DESC = '''
 Checks an IDR dataset to make sure each image/well has an annotation.
 Prints the images/wells which don't have any annotations to stderr.
 
@@ -26,26 +27,31 @@ python check_annotations.py Screen:[Screen ID] <path to annotation.csv>
 
 Environment variables OMERO_USER, OMERO_PASSWORD, OMERO_HOST and OMERO_PORT
 are not necessary but are taken into account if set.
-          ''')
-    sys.exit(1)
+'''
+
+parser = argparse.ArgumentParser(description=DESC)
+parser.add_argument("target", help="Project:123 or Screen:123")
+parser.add_argument("-a", help="The annotation.csv file",
+                    default=None)
+parser.add_argument("-v", "--verbose", action="count", default=0,
+                    help="Verbosity (-v, -vv, etc)")
+
+args = parser.parse_args()
+loglevel = 30 - (args.verbose * 10)
+logging.basicConfig(level=loglevel, format='%(levelname)s: %(message)s')
 
 
-if len(sys.argv) < 2:
-    printusage()
-else:
-    if sys.argv[1] == '-h' or sys.argv[1] == '--help':
-        printusage()
-    target = sys.argv[1].split(':')
-    if target[0] == 'Project':
-        projectId = int(target[1])
-        screenId = None
-    elif target[0] == 'Screen':
-        screenId = int(target[1])
-        projectId = None
-    annoFile = None
-    if len(sys.argv) == 3:
-        annoFile = sys.argv[2]
+target = args.target.split(':')
+if target[0] == 'Project':
+    projectId = int(target[1])
+    screenId = None
+elif target[0] == 'Screen':
+    screenId = int(target[1])
+    projectId = None
 
+annoFile = None
+if args.a:
+    annoFile = args.a
 
 host = os.environ.get('OMERO_HOST', 'localhost')
 port = int(os.environ.get('OMERO_PORT', '4064'))
@@ -56,7 +62,7 @@ problems = set()
 
 
 def flag_error(container, image, reason):
-    """ Prints an error to stderr and keeps track of reason
+    """ Logs the error and keeps track of reason
     container: str
         Name of the container (Dataset or Plate)
     image: str
@@ -65,7 +71,7 @@ def flag_error(container, image, reason):
         The nature of the problem
     """
     problems.add(reason)
-    print("{},{},{}".format(container, image, reason), file=sys.stderr)
+    logging.info("{},{},{}".format(container, image, reason))
 
 
 def check_annotations(anns):
@@ -82,7 +88,7 @@ def check_annotations(anns):
     return False
 
 
-# Contains all unique Dataset/Image name resp. Plate/Well pos 
+# Contains all unique Dataset/Image name resp. Plate/Well pos
 # entries gathered from the csv file.
 csv_data = set()
 
@@ -93,13 +99,15 @@ if annoFile:
             key = "{},{}".format(row["Dataset Name"],
                                  row["Image Name"])
             if key in csv_data:
-                flag_error(row["Dataset Name"], row["Image Name"], "Duplicate entry in csv file")
+                flag_error(row["Dataset Name"], row["Image Name"],
+                           "Duplicate entry in csv file")
             csv_data.add(key)
     elif screenId:
         for index, row in df.iterrows():
             key = "{},{}".format(row["Plate"], row["Well"])
             if key in csv_data:
-                flag_error(row["Plate"], row["Well"], "Duplicate entry in csv file")
+                flag_error(row["Plate"], row["Well"],
+                           "Duplicate entry in csv file")
             csv_data.add(key)
 
 
@@ -115,27 +123,30 @@ images = set()
 if projectId:
     project = conn.getObject("Project", projectId)
     if not project:
-        print("There's no Project with this id.")
+        logging.critical("There's no Project with this id.")
         sys.exit(1)
     for ds in project.listChildren():
         for img in ds.listChildren():
             key = "{},{}".format(ds.getName(), img.getName())
             if csv_data:
                 if key not in csv_data:
-                    flag_error(ds.getName(), img.getName(), "No annotations")
+                    flag_error(ds.getName(), img.getName(),
+                               "Missing Annotation")
                 else:
                     csv_data.remove(key)
             else:
                 if not check_annotations(img.listAnnotations()):
-                    flag_error(ds.getName(), img.getName(), "No annotations")
+                    flag_error(ds.getName(), img.getName(),
+                               "Missing Annotation")
             if key in images:
-                flag_error(ds.getName(), img.getName(), "Dataset/Image not unique")
+                flag_error(ds.getName(), img.getName(),
+                           "Non-unique Dataset/Image")
             else:
                 images.add(key)
 elif screenId:
     screen = conn.getObject("Screen", screenId)
     if not screen:
-        print("There's no Screen with this id.")
+        logging.critical("There's no Screen with this id.")
         sys.exit(1)
     for pl in screen.listChildren():
         for well in pl.listChildren():
@@ -143,31 +154,33 @@ elif screenId:
                 key = "{},{}".format(pl.getName(), well.getWellPos())
                 if csv_data:
                     if key not in csv_data:
-                        flag_error(pl.getName(), well.getWellPos(), "No annotations")
+                        flag_error(pl.getName(), well.getWellPos(),
+                                   "Missing Annotation")
                     else:
                         csv_data.remove(key)
                 else:
                     if not check_annotations(well.listAnnotations()):
-                        flag_error(pl.getName(), well.getWellPos(), "No annotations")
+                        flag_error(pl.getName(), well.getWellPos(),
+                                   "Missing Annotation")
                 if key in images:
-                    flag_error(pl.getName(), well.getWellPos(), "Plate/Well not unique")
+                    flag_error(pl.getName(), well.getWellPos(),
+                               "Non-unique Plate/Well")
                 else:
                     images.add(key)
 
 conn.close()
 
 if csv_data:
-    print("Warning: There are additional entries in %s which don't match any "
-          "images (Dataset,Image respectively Plate,WellPosition):" % annoFile)
+    logging.warning("There are additional entries in the csv file which don't"
+                    " match any images:")
     for key in csv_data:
-        print(key)
+        logging.info("{},No image for this entry".format(key))
 
 if not problems:
     print("All images are unique and have annotations.")
     sys.exit(0)
 else:
-    print("Problem(s) detected:")
+    logging.error("Problem(s) detected:")
     for prob in problems:
-        print(prob)
-    print("See stderr output for details.")
+        logging.error(prob)
     sys.exit(1)
