@@ -42,9 +42,6 @@ elif target[0] == 'Screen':
     screenId = int(target[1])
     projectId = None
 
-annoFile = None
-if args.a:
-    annoFile = args.a
 
 host = os.environ.get('OMERO_HOST', 'localhost')
 port = int(os.environ.get('OMERO_PORT', '4064'))
@@ -85,8 +82,8 @@ def check_annotations(anns):
 # entries gathered from the csv file.
 csv_data = set()
 
-if annoFile:
-    df = pandas.read_csv(annoFile)
+if args.a:
+    df = pandas.read_csv(args.a)
     if projectId:
         for index, row in df.iterrows():
             key = "{},{}".format(row["Dataset Name"],
