@@ -9,7 +9,6 @@ import os
 
 DESC = '''
 Checks an IDR dataset to make sure each image/well has an annotation.
-Prints the images/wells which don't have any annotations to stderr.
 
 If an annotation.csv is provided it will be checked that all images have
 a corresponding entry in there. The images themselves won't be checked!
@@ -18,12 +17,6 @@ Useful pre-annotation, in order to see if the annotation.csv file is correct.
 If no annotation.csv is provided the images themselves will be check if
 they have at least one map annotation attached. Useful post-annotation,
 to verify that there a no non-annotated images.
-
-Usage:
-python check_annotations.py Project:[Project ID] <path to annotation.csv>
-or
-python check_annotations.py Screen:[Screen ID] <path to annotation.csv>
-
 
 Environment variables OMERO_USER, OMERO_PASSWORD, OMERO_HOST and OMERO_PORT
 are not necessary but are taken into account if set.
