@@ -24,10 +24,10 @@ are not necessary but are taken into account if set.
 
 parser = argparse.ArgumentParser(description=DESC)
 parser.add_argument("target", help="Project:123 or Screen:123")
-parser.add_argument("-a", help="The annotation.csv file",
-                    default=None)
+parser.add_argument("file", nargs="?", help="The annotation.csv file")
 parser.add_argument("-v", "--verbose", action="count", default=0,
                     help="Verbosity (-v, -vv, etc)")
+
 
 args = parser.parse_args()
 loglevel = 30 - (args.verbose * 10)
@@ -82,8 +82,8 @@ def check_annotations(anns):
 # entries gathered from the csv file.
 csv_data = set()
 
-if args.a:
-    df = pandas.read_csv(args.a)
+if args.file:
+    df = pandas.read_csv(args.file)
     if projectId:
         for index, row in df.iterrows():
             key = "{},{}".format(row["Dataset Name"],
