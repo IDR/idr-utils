@@ -27,12 +27,12 @@ def find_pubchem_compounds(conn):
     all_compounds = conn.getQueryService().findAllByQuery(
         query, None, conn.SERVICE_OPTS)
     ncompounds = len(all_compounds)
+    log.info(f"Found {ncompounds} compounds")
     query += f" and mv.value like '%{PUBCHEM_URL}%'"
     pubchem_compounds = conn.getQueryService().findAllByQuery(
         query, None, conn.SERVICE_OPTS)
     npubchem_compounds = len(pubchem_compounds)
-    log.info(f"Found {npubchem_compounds} compounds with PubChem identifiers"
-             f" (out of {ncompounds})")
+    log.info(f"Found {npubchem_compounds} compounds with PubChem identifiers")
     return pubchem_compounds
 
 
@@ -84,8 +84,7 @@ def update_compound_urls(compounds, primary_url="PubChem"):
             mapValue = [omero.model.NamedValue(x[0], x[1]) for x in new_pairs]
             compound.setMapValue(mapValue)
             updated_compounds.append(compound)
-
-    log.info("Updating annotations for %s compounds" % len(updated_compounds))
+    log.info("%s compounds need to be updated" % len(updated_compounds))
     return updated_compounds
 
 
@@ -101,7 +100,7 @@ def main(argv):
         '--batch', type=int, default=500,
         help='Number of compounds to update in batch')
     parser.add_argument(
-        '--primary-url', choices=['PubChem', 'NCBI'],
+        '--primary-url', choices=['PubChem', 'NCBI'], default='PubChem',
         help='Primary URL to use')
     parser.add_argument('--dry-run', '-n', action='store_true')
     args = parser.parse_args(argv)
