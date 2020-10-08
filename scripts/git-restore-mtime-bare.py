@@ -50,7 +50,7 @@ mtime = 0
 gitobj = subprocess.Popen(shlex.split('git whatchanged --pretty=%at'),
                           stdout=subprocess.PIPE)
 for line in gitobj.stdout:
-    line = line.strip()
+    line = line.strip().decode("utf-8")
 
     # Blank line between Date and list of files
     if not line:
@@ -62,7 +62,7 @@ for line in gitobj.stdout:
         if file in filelist:
             filelist.remove(file)
             # print mtime, file
-            os.utime(file, (mtime, mtime))
+            os.utime(file, (mtime, mtime), follow_symlinks=False)
 
     # Date line
     else:
