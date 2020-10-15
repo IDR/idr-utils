@@ -121,7 +121,7 @@ if projectId:
             if csv_data:
                 if key not in csv_data:
                     flag_error(ds.getName(), img.getName(),
-                               "Missing Annotation")
+                               "Missing row in CSV")
                 else:
                     csv_data.remove(key)
             else:
@@ -145,7 +145,7 @@ elif screenId:
                 if csv_data:
                     if key not in csv_data:
                         flag_error(pl.getName(), well.getWellPos(),
-                                   "Missing Annotation")
+                                   "Missing row in CSV")
                     else:
                         csv_data.remove(key)
                 else:
