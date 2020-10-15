@@ -48,7 +48,7 @@ port = int(os.environ.get('OMERO_PORT', '4064'))
 
 
 # Keep track of detected problems
-problems = set()
+problems = {}
 
 
 def flag_error(container, image, reason):
@@ -60,8 +60,17 @@ def flag_error(container, image, reason):
     reason: str
         The nature of the problem
     """
-    problems.add(reason)
-    logging.info("{},{},{}".format(container, image, reason))
+    problems.setdefault(reason, []).append((container, image))
+
+
+def report_problems():
+    from operator import itemgetter
+    logging.error("Problem(s) detected:")
+    for reason in problems:
+        logging.error(reason)
+        elements = sorted(problems[reason], key=itemgetter(0, 1))
+        for element in elements:
+            logging.info("{},{}".format(element[0], element[1]))
 
 
 def check_annotations(anns):
@@ -170,7 +179,5 @@ if not problems:
     print("All images are unique and have annotations.")
     sys.exit(0)
 else:
-    logging.error("Problem(s) detected:")
-    for prob in problems:
-        logging.error(prob)
+    report_problems()
     sys.exit(1)
