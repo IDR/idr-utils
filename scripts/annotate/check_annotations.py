@@ -27,6 +27,7 @@ parser.add_argument("target", help="Project:123 or Screen:123")
 parser.add_argument("file", nargs="?", help="The annotation.csv file")
 parser.add_argument("-v", "--verbose", action="count", default=0,
                     help="Verbosity (-v, -vv, etc)")
+parser.add_argument("--report", help="File with the validation output")
 
 
 args = parser.parse_args()
@@ -93,11 +94,14 @@ csv_keys = {}
 
 if args.file:
     df = pandas.read_csv(args.file)
+    # Add reporting column
+    df["Errors"] = ""
     if projectId:
         for index, row in df.iterrows():
             key = "{},{}".format(row["Dataset Name"],
                                  row["Image Name"])
             if key in csv_keys:
+                df.loc[index, "Errors"] = "Duplicate entry"
                 flag_error(row["Dataset Name"], row["Image Name"],
                            "Duplicate entry in csv file")
             csv_keys[key] = index
@@ -105,6 +109,7 @@ if args.file:
         for index, row in df.iterrows():
             key = "{},{}".format(row["Plate"], row["Well"])
             if key in csv_keys:
+                df.loc[index, "Errors"] = "Duplicate entry"
                 flag_error(row["Plate"], row["Well"],
                            "Duplicate entry in csv file")
             csv_keys[key] = index
@@ -129,6 +134,11 @@ if projectId:
             key = "{},{}".format(ds.getName(), img.getName())
             if csv_keys:
                 if key not in csv_keys:
+                    df = df.append({
+                        "Dataset Name": ds.getName(),
+                        "Image Name": img.getName(),
+                        "Errors": "Missing annotation",},
+                        ignore_index=True)
                     flag_error(ds.getName(), img.getName(),
                                "Missing row in CSV")
                 else:
@@ -153,6 +163,11 @@ elif screenId:
                 key = "{},{}".format(pl.getName(), well.getWellPos())
                 if csv_keys:
                     if key not in csv_keys:
+                        df = df.append({
+                            "Plate": pl.getName(),
+                            "Well": well.getWellPos(),
+                            "Errors": "Missing annotation",},
+                            ignore_index=True)
                         flag_error(pl.getName(), well.getWellPos(),
                                    "Missing row in CSV")
                     else:
@@ -172,7 +187,8 @@ conn.close()
 if csv_keys:
     logging.warning("There are additional entries in the csv file which don't"
                     " match any images:")
-    for key in sorted(csv_keys):
+    for key in sorted(csv_keys, key=itemgetter(0, 1)):
+        df.loc[csv_keys[key], "Errors"] = "No image"
         logging.info("{},No image for this entry".format(key))
 
 if not problems:
@@ -180,4 +196,6 @@ if not problems:
     sys.exit(0)
 else:
     report_problems()
+    if args.report:
+        df.to_csv(args.report, index=False)
     sys.exit(1)
