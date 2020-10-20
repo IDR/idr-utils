@@ -137,7 +137,7 @@ if projectId:
                     df = df.append({
                         "Dataset Name": ds.getName(),
                         "Image Name": img.getName(),
-                        "Errors": "Missing annotation",},
+                        "Errors": "Missing annotation"},
                         ignore_index=True)
                     flag_error(ds.getName(), img.getName(),
                                "Missing annotation in csv file ")
@@ -166,7 +166,7 @@ elif screenId:
                         df = df.append({
                             "Plate": pl.getName(),
                             "Well": well.getWellPos(),
-                            "Errors": "Missing annotation",},
+                            "Errors": "Missing annotation"},
                             ignore_index=True)
                         flag_error(pl.getName(), well.getWellPos(),
                                    "Missing annotation in csv file")
