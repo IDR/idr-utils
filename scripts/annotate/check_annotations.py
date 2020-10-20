@@ -140,13 +140,13 @@ if projectId:
                         "Errors": "Missing annotation",},
                         ignore_index=True)
                     flag_error(ds.getName(), img.getName(),
-                               "Missing row in CSV")
+                               "Missing annotation in csv file ")
                 else:
                     csv_keys.pop(key)
             else:
                 if not check_annotations(img.listAnnotations()):
                     flag_error(ds.getName(), img.getName(),
-                               "Missing Annotation")
+                               "Missing annotation")
             if key in images:
                 flag_error(ds.getName(), img.getName(),
                            "Non-unique Dataset/Image")
@@ -169,13 +169,13 @@ elif screenId:
                             "Errors": "Missing annotation",},
                             ignore_index=True)
                         flag_error(pl.getName(), well.getWellPos(),
-                                   "Missing row in CSV")
+                                   "Missing annotation in csv file")
                     else:
                         csv_keys.pop(key)
                 else:
                     if not check_annotations(well.listAnnotations()):
                         flag_error(pl.getName(), well.getWellPos(),
-                                   "Missing Annotation")
+                                   "Missing annotation")
                 if key in images:
                     flag_error(pl.getName(), well.getWellPos(),
                                "Non-unique Plate/Well")
@@ -187,9 +187,9 @@ conn.close()
 if csv_keys:
     logging.warning("There are additional entries in the csv file which don't"
                     " match any images:")
-    for key in sorted(csv_keys, key=itemgetter(0, 1)):
+    for key in sorted(csv_keys):
         df.loc[csv_keys[key], "Errors"] = "No image"
-        logging.info("{},No image for this entry".format(key))
+        logging.info("{},No image".format(key))
 
 if not problems:
     print("All images are unique and have annotations.")
