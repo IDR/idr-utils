@@ -129,8 +129,8 @@ if projectId:
     if not project:
         logging.critical("There's no Project with this id.")
         sys.exit(1)
-    for ds in project.listChildren():
-        for img in ds.listChildren():
+    for ds in sorted(project.listChildren(), key=lambda x: x.getName()):
+        for img in sorted(ds.listChildren(), key=lambda x: x.getName()):
             key = "{},{}".format(ds.getName(), img.getName())
             if csv_keys:
                 if key not in csv_keys:
@@ -157,8 +157,8 @@ elif screenId:
     if not screen:
         logging.critical("There's no Screen with this id.")
         sys.exit(1)
-    for pl in screen.listChildren():
-        for well in pl.listChildren():
+    for pl in sorted(screen.listChildren(), key=lambda x: x.getName()):
+        for well in sorted(pl.listChildren(), key=lambda x: x.getWellPos()):
             if well.getWellSample():
                 key = "{},{}".format(pl.getName(), well.getWellPos())
                 if csv_keys:
