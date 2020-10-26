@@ -27,6 +27,8 @@ parser.add_argument("target", help="Project:123 or Screen:123")
 parser.add_argument("file", nargs="?", help="The annotation.csv file")
 parser.add_argument("-v", "--verbose", action="count", default=0,
                     help="Verbosity (-v, -vv, etc)")
+parser.add_argument("-o", "--output",
+                    help="Output a copy of annotation.csv with remarks.")
 
 
 args = parser.parse_args()
@@ -49,6 +51,8 @@ port = int(os.environ.get('OMERO_PORT', '4064'))
 
 # Keep track of detected problems
 problems = {}
+if args.output:
+    problems_rev = {}
 
 
 def flag_error(container, image, reason):
@@ -61,6 +65,9 @@ def flag_error(container, image, reason):
         The nature of the problem
     """
     problems.setdefault(reason, []).append((container, image))
+    if args.output:
+        key = "{},{}".format(container, image)
+        problems_rev[key] = reason
 
 
 def report_problems():
@@ -108,7 +115,6 @@ if args.file:
                 flag_error(row["Plate"], row["Well"],
                            "Duplicate entry in csv file")
             csv_data.add(key)
-
 
 conn = BlitzGateway(os.environ.get('OMERO_USER', 'public'),
                     os.environ.get('OMERO_PASSWORD', 'public'),
@@ -174,6 +180,36 @@ if csv_data:
                     " match any images:")
     for key in csv_data:
         logging.info("{},No image for this entry".format(key))
+
+if args.output and args.file:
+    df = pandas.read_csv(args.file)
+    if projectId:
+        for index, row in df.iterrows():
+            key = "{},{}".format(row["Dataset Name"], row["Image Name"])
+            if key in problems_rev:
+                df.loc[index, 'Problem'] = problems_rev.pop(key)
+            elif key in csv_data:
+                df.loc[index, 'Problem'] = "No image"
+        if problems_rev:
+            for key in problems_rev:
+                a = key.split(",")[0]
+                b = key.split(",")[1]
+                df = df.append({'Dataset Name': a, 'Image Name': b,
+                                'Problem': "No data"}, ignore_index=True)
+    if screenId:
+        for index, row in df.iterrows():
+            key = "{},{}".format(row["Plate"], row["Well"])
+            if key in problems_rev:
+                df.loc[index, 'Problem'] = problems_rev.pop(key)
+            elif key in csv_data:
+                df.loc[index, 'Problem'] = "No image"
+        if problems_rev:
+            for key in problems_rev:
+                a = key.split(",")[0]
+                b = key.split(",")[1]
+                df = df.append({'Plate': a, 'Well': b, 'Problem': "No data"},
+                               ignore_index=True)
+    df.to_csv(args.output, index=False)
 
 if not problems:
     print("All images are unique and have annotations.")
