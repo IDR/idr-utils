@@ -27,7 +27,9 @@ parser.add_argument("target", help="Project:123 or Screen:123")
 parser.add_argument("file", nargs="?", help="The annotation.csv file")
 parser.add_argument("-v", "--verbose", action="count", default=0,
                     help="Verbosity (-v, -vv, etc)")
-parser.add_argument("--report", help="File with the validation output")
+parser.add_argument(
+    "-o", "--output",
+    help="A copy of the annotation.csv file including the detected problems")
 
 
 args = parser.parse_args()
@@ -196,6 +198,6 @@ if not problems:
     sys.exit(0)
 else:
     report_problems()
-    if args.report:
-        df.to_csv(args.report, index=False)
+    if args.output:
+        df.to_csv(args.output, index=False)
     sys.exit(1)
