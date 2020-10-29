@@ -27,6 +27,9 @@ parser.add_argument("target", help="Project:123 or Screen:123")
 parser.add_argument("file", nargs="?", help="The annotation.csv file")
 parser.add_argument("-v", "--verbose", action="count", default=0,
                     help="Verbosity (-v, -vv, etc)")
+parser.add_argument(
+    "-o", "--output",
+    help="A copy of the annotation.csv file including the detected problems")
 
 
 args = parser.parse_args()
@@ -89,25 +92,29 @@ def check_annotations(anns):
 
 # Contains all unique Dataset/Image name resp. Plate/Well pos
 # entries gathered from the csv file.
-csv_data = set()
+csv_keys = {}
 
 if args.file:
     df = pandas.read_csv(args.file)
+    # Add reporting column
+    df["Errors"] = ""
     if projectId:
         for index, row in df.iterrows():
             key = "{},{}".format(row["Dataset Name"],
                                  row["Image Name"])
-            if key in csv_data:
+            if key in csv_keys:
+                df.loc[index, "Errors"] = "Duplicate entry"
                 flag_error(row["Dataset Name"], row["Image Name"],
                            "Duplicate entry in csv file")
-            csv_data.add(key)
+            csv_keys[key] = index
     elif screenId:
         for index, row in df.iterrows():
             key = "{},{}".format(row["Plate"], row["Well"])
-            if key in csv_data:
+            if key in csv_keys:
+                df.loc[index, "Errors"] = "Duplicate entry"
                 flag_error(row["Plate"], row["Well"],
                            "Duplicate entry in csv file")
-            csv_data.add(key)
+            csv_keys[key] = index
 
 
 conn = BlitzGateway(os.environ.get('OMERO_USER', 'public'),
@@ -124,19 +131,24 @@ if projectId:
     if not project:
         logging.critical("There's no Project with this id.")
         sys.exit(1)
-    for ds in project.listChildren():
-        for img in ds.listChildren():
+    for ds in sorted(project.listChildren(), key=lambda x: x.getName()):
+        for img in sorted(ds.listChildren(), key=lambda x: x.getName()):
             key = "{},{}".format(ds.getName(), img.getName())
-            if csv_data:
-                if key not in csv_data:
+            if csv_keys:
+                if key not in csv_keys:
+                    df = df.append({
+                        "Dataset Name": ds.getName(),
+                        "Image Name": img.getName(),
+                        "Errors": "Missing annotation"},
+                        ignore_index=True)
                     flag_error(ds.getName(), img.getName(),
-                               "Missing row in CSV")
+                               "Missing annotation in csv file ")
                 else:
-                    csv_data.remove(key)
+                    csv_keys.pop(key)
             else:
                 if not check_annotations(img.listAnnotations()):
                     flag_error(ds.getName(), img.getName(),
-                               "Missing Annotation")
+                               "Missing annotation")
             if key in images:
                 flag_error(ds.getName(), img.getName(),
                            "Non-unique Dataset/Image")
@@ -147,20 +159,25 @@ elif screenId:
     if not screen:
         logging.critical("There's no Screen with this id.")
         sys.exit(1)
-    for pl in screen.listChildren():
-        for well in pl.listChildren():
+    for pl in sorted(screen.listChildren(), key=lambda x: x.getName()):
+        for well in sorted(pl.listChildren(), key=lambda x: x.getWellPos()):
             if well.getWellSample():
                 key = "{},{}".format(pl.getName(), well.getWellPos())
-                if csv_data:
-                    if key not in csv_data:
+                if csv_keys:
+                    if key not in csv_keys:
+                        df = df.append({
+                            "Plate": pl.getName(),
+                            "Well": well.getWellPos(),
+                            "Errors": "Missing annotation"},
+                            ignore_index=True)
                         flag_error(pl.getName(), well.getWellPos(),
-                                   "Missing row in CSV")
+                                   "Missing annotation in csv file")
                     else:
-                        csv_data.remove(key)
+                        csv_keys.pop(key)
                 else:
                     if not check_annotations(well.listAnnotations()):
                         flag_error(pl.getName(), well.getWellPos(),
-                                   "Missing Annotation")
+                                   "Missing annotation")
                 if key in images:
                     flag_error(pl.getName(), well.getWellPos(),
                                "Non-unique Plate/Well")
@@ -169,15 +186,18 @@ elif screenId:
 
 conn.close()
 
-if csv_data:
+if csv_keys:
     logging.warning("There are additional entries in the csv file which don't"
                     " match any images:")
-    for key in csv_data:
-        logging.info("{},No image for this entry".format(key))
+    for key in sorted(csv_keys):
+        df.loc[csv_keys[key], "Errors"] = "No image"
+        logging.info("{},No image".format(key))
 
 if not problems:
     print("All images are unique and have annotations.")
     sys.exit(0)
 else:
     report_problems()
+    if args.output:
+        df.to_csv(args.output, index=False)
     sys.exit(1)
