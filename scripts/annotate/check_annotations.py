@@ -30,7 +30,8 @@ parser.add_argument("-v", "--verbose", action="count", default=0,
 parser.add_argument(
     "-o", "--output",
     help="A copy of the annotation.csv file including the detected problems")
-
+parser.add_argument("--skip-ok", action="store_true", default=False,
+    help="Don't include entries without problems in the annotation.csv copy")
 
 args = parser.parse_args()
 loglevel = 30 - (args.verbose * 10)
@@ -95,7 +96,7 @@ def check_annotations(anns):
 csv_keys = {}
 
 if args.file:
-    df = pandas.read_csv(args.file)
+    df = pandas.read_csv(args.file, dtype=str)
     # Add reporting column
     df["Errors"] = ""
     if projectId:
@@ -199,5 +200,7 @@ if not problems:
 else:
     report_problems()
     if args.output:
+        if args.skip_ok:
+            df = df[df.Errors != ""]
         df.to_csv(args.output, index=False)
     sys.exit(1)
