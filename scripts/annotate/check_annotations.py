@@ -31,7 +31,8 @@ parser.add_argument(
     "-o", "--output",
     help="A copy of the annotation.csv file including the detected problems")
 parser.add_argument("--skip-ok", action="store_true", default=False,
-    help="Don't include entries without problems in the annotation.csv copy")
+                    help="Don't include entries without problems in the "
+                         "annotation.csv copy")
 
 args = parser.parse_args()
 loglevel = 30 - (args.verbose * 10)
@@ -123,8 +124,8 @@ conn = BlitzGateway(os.environ.get('OMERO_USER', 'public'),
                     host=host, port=port)
 conn.connect()
 
-# Keeps track of all Dataset/Image name resp. Plate/Well pos
-# combinations in the Project/Screen.
+# Keeps track of all Dataset/Image name resp. Plate/Well pos combinations
+# in the Project/Screen.
 images = set()
 
 if projectId:
