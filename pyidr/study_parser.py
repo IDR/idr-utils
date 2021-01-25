@@ -518,9 +518,11 @@ class Formatter(object):
         if len(objects) == 1:
             return
 
+        found_toplevel = False
         project = gateway.getObject(
             "Project", attributes={"name": self.m["name"]})
         if project is not None:
+            found_toplevel = True
             self.check_object(project, self.m, update=update)
             objects.append(project)
             components_map.append(
@@ -530,11 +532,15 @@ class Formatter(object):
             screen = gateway.getObject(
                 "Screen", attributes={"name": self.m["name"]})
             if screen is not None:
+                found_toplevel = True
                 self.check_object(screen, self.m, update=update)
                 objects.append(screen)
                 components_map.append(
                     ("Overview",
                      "%s?show=screen-%s" % (WEBCLIENT_URL, screen.id)))
+
+        if not found_toplevel:
+            self.log.error(f'Top level container {self.m["name"]} not found')
 
         for obj in objects:
             self.check_annotation(
