@@ -114,19 +114,33 @@ class StudyParser(object):
         self.study.update(self.parse_data_doi(self.study, "Study Data DOI"))
 
         self.components = []
-        for t in TYPES:
-            n = int(self.study.get('Study %ss Number' % t, 0))
-            for i in range(n):
-                self.log.debug("Parsing %s %g" % (t, i + 1))
 
-                d = self.parse(t, lines=self.get_lines(i + 1, t))
-                d.update({'Type': t})
-                d.update(self.study)
-                doi = self.parse_data_doi(d, "%s Data DOI" % t)
-                if doi:
-                    d.update(doi)
-                self.parse_annotation_file(d)
-                self.components.append(d)
+        # Find number of screens and experiments
+        n_screens = int(self.study.get('Study Screens Number', 0))
+        n_experiments = int(self.study.get('Study Experiments Number', 0))
+        self.log.debug("Expecting %s screen(s) and %s experiment(s)" %
+                       (n_screens, n_experiments))
+        if n_screens > 0 and n_experiments > 0:
+            type_regexp = '(Screen|Experiment)'
+        elif n_screens > 0:
+            type_regexp = '(Screen)'
+        elif n_experiments > 0:
+            type_regexp = '(Experiment)'
+        else:
+            raise Exception("Not enough screens and/or experiments")
+
+        # Find all study components in order
+        for i in range(n_screens + n_experiments):
+            self.log.debug("Parsing %s %g" % (type_regexp, i + 1))
+            lines, component_type = self.get_lines(i + 1, type_regexp)
+            d = self.parse(component_type, lines=lines)
+            d.update({'Type': component_type})
+            d.update(self.study)
+            doi = self.parse_data_doi(d, "%s Data DOI" % component_type)
+            if doi:
+                d.update(doi)
+            self.parse_annotation_file(d)
+            self.components.append(d)
 
         if not self.components:
             raise Exception("Need to define at least one screen or experiment")
@@ -161,23 +175,27 @@ class StudyParser(object):
                 d[key] = value
         return d
 
-    def get_lines(self, index, component_type):
-        PATTERN = re.compile(r"^%s Number\t(\d+)" % component_type)
+    def get_lines(self, index, component_regexp):
+        PATTERN = re.compile(r"^%s Number\t(\d+)" % component_regexp)
         found = False
         lines = []
+        component_type = None
         for idx, line in enumerate(self._study_lines):
             m = PATTERN.match(line)
             if m:
-                if int(m.group(1)) == index:
+                if int(m.group(2)) == index and found:
+                    raise Exception("Duplicate component %g" % index)
+                elif int(m.group(2)) == index and not found:
                     found = True
-                elif int(m.group(1)) != index and found:
-                    return lines
+                    component_type = m.group(1)
+                elif int(m.group(2)) != index and found:
+                    return lines, component_type
             if found:
                 self._study_lines_used[idx].append(("get_lines", index))
                 lines.append(line)
         if not lines:
             raise Exception("Could not find %s %g" % (component_type, index))
-        return lines
+        return lines, component_type
 
     def parse_annotation_file(self, component):
         import glob
