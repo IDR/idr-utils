@@ -213,11 +213,11 @@ class StudyParser(object):
 
         # Generate GitHub annotation URL
         if os.path.exists(os.path.join(self._dir, ".git")):
-            base_gh_url = "https://github.com/IDR/%s/blob/master/%s" % (
+            base_gh_url = "https://github.com/IDR/%s/blob/HEAD/%s" % (
                 m.group(1), m.group(3))
         else:
             base_gh_url = (
-                "https://github.com/IDR/idr-metadata/blob/master/%s" % name)
+                "https://github.com/IDR/idr-metadata/blob/HEAD/%s" % name)
 
         # Try to find single annotation file in root directory
         for extension in ['.csv', '.csv.gz']:
