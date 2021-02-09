@@ -175,7 +175,7 @@ class StudyParser(object):
         return d
 
     def get_lines(self, index, component_regexp):
-        self.log.debug("Parsing %s %g" % (component_regexp, i + 1))
+        self.log.debug("Parsing %s %g" % (component_regexp, index))
         PATTERN = re.compile(r"^%s Number\t(\d+)" % component_regexp)
         found = False
         lines = []
