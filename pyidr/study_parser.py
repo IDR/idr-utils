@@ -121,18 +121,17 @@ class StudyParser(object):
         self.log.debug("Expecting %s screen(s) and %s experiment(s)" %
                        (n_screens, n_experiments))
         if n_screens > 0 and n_experiments > 0:
-            type_regexp = '(Screen|Experiment)'
+            component_regexp = '(Screen|Experiment)'
         elif n_screens > 0:
-            type_regexp = '(Screen)'
+            component_regexp = '(Screen)'
         elif n_experiments > 0:
-            type_regexp = '(Experiment)'
+            component_regexp = '(Experiment)'
         else:
             raise Exception("Not enough screens and/or experiments")
 
         # Find all study components in order
         for i in range(n_screens + n_experiments):
-            self.log.debug("Parsing %s %g" % (type_regexp, i + 1))
-            lines, component_type = self.get_lines(i + 1, type_regexp)
+            lines, component_type = self.get_lines(i + 1, component_regexp)
             d = self.parse(component_type, lines=lines)
             d.update({'Type': component_type})
             d.update(self.study)
@@ -176,6 +175,7 @@ class StudyParser(object):
         return d
 
     def get_lines(self, index, component_regexp):
+        self.log.debug("Parsing %s %g" % (component_regexp, i + 1))
         PATTERN = re.compile(r"^%s Number\t(\d+)" % component_regexp)
         found = False
         lines = []
@@ -194,7 +194,7 @@ class StudyParser(object):
                 self._study_lines_used[idx].append(("get_lines", index))
                 lines.append(line)
         if not lines:
-            raise Exception("Could not find %s %g" % (component_type, index))
+            raise Exception("Could not find %s %g" % (component_regexp, index))
         return lines, component_type
 
     def parse_annotation_file(self, component):
