@@ -103,16 +103,15 @@ def studies(study_list, default_columns=["name", "path"]):
             continue
 
         logging.info("Finding containers for study %s" % study)
-        target = "Plate"
-        containers = glob(join(study, "screen[A-Z]"))
-        if containers:
-            assert not glob(join(study, "experiment*")), study
-        else:
-            target = "Dataset"
-            containers = glob(join(study, "experiment[A-Z]"))
+        containers = glob(
+            join(study, "screen[A-Z]")) + glob(join(study, "experiment[A-Z]"))
 
         assert len(containers) >= 1
         for container in sorted(containers):
+            if container.startswith(join(study, "screen")):
+                target = "Plate"
+            else:
+                target = "Dataset"
             bulks = glob(join(container, "*-bulk.yml"))
             bulks += glob(join(container, "**/*-bulk.yml"))
             for bulk in bulks:
