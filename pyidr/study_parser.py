@@ -34,7 +34,7 @@ KEYS = (
     Key('Study Type Term Accession', 'Study', optional=True),
     Key('Study Publication Title', 'Study'),
     Key('Study Author List', 'Study'),
-    Key('Study Organism', 'Study'),
+    Key('Study Organism', 'Study', optional=True),
     Key('Study Organism Term Source REF', 'Study', optional=True),
     Key('Study Organism Term Accession', 'Study', optional=True),
     # OPTIONAL_KEYS["Study"]
@@ -73,6 +73,9 @@ KEYS = (
     # OPTIONAL_KEYS["Experiment"]
     Key('Experiment Data DOI', 'Experiment', optional=True),
     Key("Experiment Data Publisher", 'Experiment', optional=True),
+    Key('Experiment Organism', 'Experiment', optional=True),
+    Key('Experiment Organism Term Source REF', 'Experiment', optional=True),
+    Key('Experiment Organism Term Accession', 'Experiment', optional=True),
     # MANDATORY_KEYS["Screen"]
     Key(r'Comment\[IDR Screen Name\]', 'Screen'),
     Key('Screen Description', 'Screen'),
@@ -84,6 +87,9 @@ KEYS = (
     Key('Screen Data DOI', 'Screen', optional=True),
     Key('Screen Data Publisher', 'Screen', optional=True),
     Key('Screen Technology Type', 'Screen', optional=True),
+    Key('Screen Organism', 'Screen', optional=True),
+    Key('Screen Organism Term Source REF', 'Screen', optional=True),
+    Key('Screen Organism Term Accession', 'Screen', optional=True),
 )
 
 DOI_PATTERN = re.compile(
@@ -139,6 +145,7 @@ class StudyParser(object):
             if doi:
                 d.update(doi)
             self.parse_annotation_file(d)
+            self.parse_organism(d)
             self.components.append(d)
 
         if not self.components:
@@ -283,6 +290,18 @@ class StudyParser(object):
                 "Invalid Data DOI: %s" % d[key])
         return {"Data DOI": m.group("id")}
 
+    @staticmethod
+    def parse_organism(component):
+        key = '%s Organism' % component['Type']
+        if 'Study Organism' in component and key in component:
+            raise Exception("Organism defined both at the study and %s level"
+                            % component['Type'])
+        elif 'Study Organism' not in component and key not in component:
+            raise Exception("Missing organism field")
+        elif 'Study Organism' in component:
+            component[key] = component['Study Organism']
+        return
+
     def get_study_accession(self):
         return self.study[r"Comment\[IDR Study Accession\]"]
 
@@ -302,11 +321,11 @@ class Formatter(object):
 
     EXPERIMENT_SAMPLE_PAIRS = [
         ('Sample Type', "%(Experiment Sample Type)s"),
-        ('Organism', "%(Study Organism)s"),
+        ('Organism', "%(Experiment Organism)s"),
     ]
     SCREEN_SAMPLE_PAIRS = [
         ('Sample Type', "%(Screen Sample Type)s"),
-        ('Organism', "%(Study Organism)s"),
+        ('Organism', "%(Screen Organism)s"),
     ]
     EXPERIMENT_TECHNOLOGY_PAIRS = [
         ('Study Type', "%(Study Type)s"),
