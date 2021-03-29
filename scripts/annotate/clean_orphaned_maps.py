@@ -20,7 +20,9 @@ IMAGE_MAPS = {
     }
 
 CONTAINER_MAPS = {
-    "Notebook": "openmicroscopy.org/idr/analysis/notebook"
+    "Notebook": "openmicroscopy.org/idr/analysis/notebook",
+    "Study Info": "idr.openmicroscopy.org/study/info",
+    "Study Components": "idr.openmicroscopy.org/study/components",
     }
 
 
