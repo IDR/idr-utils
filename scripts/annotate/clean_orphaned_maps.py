@@ -19,6 +19,10 @@ IMAGE_MAPS = {
     "Protein": "openmicroscopy.org/mapr/protein"
     }
 
+CONTAINER_MAPS = {
+    "Notebook": "openmicroscopy.org/idr/analysis/notebook"
+    }
+
 
 def find_orphaned_maps(conn, map_namespace, object_types):
     query = (
@@ -67,6 +71,12 @@ def main(argv):
         for map_type, map_namespace in IMAGE_MAPS.items():
             map_ids = find_orphaned_maps(
                 conn, map_namespace, ["Image", "Well"])
+            log.info(f"Found {len(map_ids)} orphaned {map_type} maps")
+            delete_maps(conn, map_ids, batch=args.batch, dryRun=args.dry_run)
+
+        for map_type, map_namespace in CONTAINER_MAPS.items():
+            map_ids = find_orphaned_maps(
+                conn, map_namespace, ["Screen", "Plate", "Project", "Dataset"])
             log.info(f"Found {len(map_ids)} orphaned {map_type} maps")
             delete_maps(conn, map_ids, batch=args.batch, dryRun=args.dry_run)
 
