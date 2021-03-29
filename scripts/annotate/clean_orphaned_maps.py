@@ -8,7 +8,7 @@ import sys
 
 log = logging.getLogger()
 
-PRIMARY_KEYS = {
+IMAGE_MAPS = {
     "Organism": "openmicroscopy.org/mapr/organism",
     "Antibody": "openmicroscopy.org/mapr/antibody",
     "Gene": "openmicroscopy.org/mapr/gene",
@@ -20,17 +20,25 @@ PRIMARY_KEYS = {
     }
 
 
-def find_orphaned_maps(conn, map_namespace):
+def find_orphaned_maps(conn, map_namespace, object_types):
     query = (
         "select m from MapAnnotation m "
-        f"where m.ns='{map_namespace}' and not exists ("
-        "select 1 FROM ImageAnnotationLink AS l WHERE l.child.id = m.id)"
-        "and not exists ("
-        "select 1 FROM WellAnnotationLink AS l WHERE l.child.id = m.id)"
+        f"where m.ns='{map_namespace}'")
+    for t in object_types:
+        query += (
+            " and not exists ("
+            f"select 1 FROM {t}AnnotationLink AS l WHERE l.child.id = m.id)"
         )
     maps = conn.getQueryService().findAllByQuery(
         query, None, conn.SERVICE_OPTS)
     return [m.id.val for m in maps]
+
+
+def delete_maps(conn, ids, batch=500, dryRun=True, wait=True):
+    for subids in chunks(ids, batch):
+        log.info(f"Deleting {len(subids)} maps")
+        conn.deleteObjects(
+            'MapAnnotation', subids, dryRun=dryRun, wait=wait)
 
 
 def chunks(elements, batch):
@@ -56,13 +64,11 @@ def main(argv):
             level=logging.INFO - 10 * args.verbose + 10 * args.quiet)
     with omero.cli.cli_login() as c:
         conn = omero.gateway.BlitzGateway(client_obj=c.get_client())
-        for map_type, map_namespace in PRIMARY_KEYS.items():
-            ids = find_orphaned_maps(conn, map_namespace)
-            log.info(f"Found {len(ids)} orphaned {map_type} maps")
-            for subids in chunks(ids, args.batch):
-                log.info(f"Deleting {len(subids)} maps")
-                conn.deleteObjects(
-                    'MapAnnotation', subids, dryRun=args.dry_run, wait=True)
+        for map_type, map_namespace in IMAGE_MAPS.items():
+            map_ids = find_orphaned_maps(
+                conn, map_namespace, ["Image", "Well"])
+            log.info(f"Found {len(map_ids)} orphaned {map_type} maps")
+            delete_maps(conn, map_ids, batch=args.batch, dryRun=args.dry_run)
 
 
 if __name__ == "__main__":
