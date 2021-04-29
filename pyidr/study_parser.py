@@ -108,7 +108,8 @@ class StudyParser(object):
         self._study_file = study_file
         self._dir = os.path.dirname(self._study_file)
         self.log = logging.getLogger("pyidr.study_parser.StudyParser")
-        with open(self._study_file, 'r') as f:
+        with open(self._study_file, 'r', encoding='utf-8',
+                  errors='ignore') as f:
             self.log.info("Parsing %s" % self._study_file)
             self._study_lines = f.readlines()
             self._study_lines_used = [
