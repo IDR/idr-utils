@@ -12,6 +12,7 @@ CLASSIFIERS = [
     "Programming Language :: Python",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
 ]
 
 
