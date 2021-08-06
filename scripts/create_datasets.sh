@@ -8,9 +8,6 @@ datasets and links them to the project.
 
 Usage:
 ./create_datasets.sh [PROJECT ID] [PATH TO filePaths.tsv]
-
-Note: The script assumes that the first column contains the 
-dataset names in the format Dataset:name:[DATASET_NAME]
 "
     exit 1
 fi
@@ -27,11 +24,12 @@ omero=/opt/omero/server/OMERO.server/bin/omero
 $omero login
 
 # Create a list of dataset names
-datasets=`cut -f1 $filePaths | cut -d ':' -f3 | sort -u`
+datasets=`cut -f1 $filePaths | sort -u`
 
 IFS=$'\n'
 for dataset in $datasets
 do
+  dataset=${dataset##*:}
   datasetId=`$omero hql --ids-only --limit 1 --style plain "select d from Dataset d where d.name='$dataset'"`
   if [ -z $datasetId ]; then
     datasetId=`$omero obj new Dataset name=$dataset`
