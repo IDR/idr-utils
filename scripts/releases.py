@@ -21,9 +21,13 @@ def create_release_stats(studies_file, release=None, date=None, size=None):
         "DB Size (GB)",
     ))
 
+    suffixes = studies['Introduced'].apply(lambda x: int(x[4:]))
     if not release:
-        release = max(studies['Introduced'])
-    index = studies['Introduced'] <= release
+        release_suffix = max(suffixes)
+        release = "prod%s" % max(suffixes)
+    else:
+        release_suffix = int(release[len('prod'):])
+    index = suffixes <= release_suffix
     if not date:
         date = "TBD"
     if not size:
@@ -31,7 +35,7 @@ def create_release_stats(studies_file, release=None, date=None, size=None):
     df.loc[0] = (
         date,
         release,
-        get_release_code(release),
+        get_release_code(release_suffix),
         int(studies[index]['Sets'].sum()),
         int(studies[index]['Wells'].sum()),
         "",
@@ -59,10 +63,9 @@ def print_release_stats(df, fmt, target=None):
     print(out)
 
 
-def get_release_code(relase_name):
-    number = relase_name[len('prod'):]
-    patch = int(number) % 10
-    minor = int((int(number) - patch) / 10)
+def get_release_code(release_suffix):
+    patch = int(release_suffix) % 10
+    minor = int((int(release_suffix) - patch) / 10)
     return "0.%s.%s" % (minor, patch)
 
 
