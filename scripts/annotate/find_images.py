@@ -1,6 +1,5 @@
 import argparse
 import re
-import os
 import omero.cli
 
 DESC = '''
