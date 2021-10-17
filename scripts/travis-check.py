@@ -28,7 +28,7 @@ for root, dirs, files in os.walk(REPO_ROOT):
 
         if fn.lower().endswith('.yml') or fn.lower().endswith('.yaml'):
             print(fn)
-            docs = list(yaml.load_all(f))
+            docs = list(yaml.safe_load_all(f))
             assert len(docs) == 1
 
         if fn.lower().endswith('.csv'):
