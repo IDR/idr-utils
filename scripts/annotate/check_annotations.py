@@ -195,13 +195,14 @@ if csv_keys:
         df.loc[csv_keys[key], "Errors"] = "No image"
         logging.info("{},No image".format(key))
 
+if args.output:
+    if args.skip_ok:
+        df = df[df.Errors != ""]
+    df.to_csv(args.output, index=False)
+
 if not problems:
     print("All images are unique and have annotations.")
     sys.exit(0)
 else:
     report_problems()
-    if args.output:
-        if args.skip_ok:
-            df = df[df.Errors != ""]
-        df.to_csv(args.output, index=False)
     sys.exit(1)
