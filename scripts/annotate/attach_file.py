@@ -41,14 +41,13 @@ def main(conn, args):
     if args.upload:
         fo = conn.createOriginalFileFromLocalFile(
             path.resolve(), mimetype=args.mimetype, ns=args.namespace)
-        fa.setFile(fo._obj)
     else:
         fo = upload_ln_s(conn.c, path.resolve(), OMERO_DATA_DIR, args.mimetype)
-        fa.setFile(fo._obj)
-        fa.setNs(omero.rtypes.rstring(args.namespace))
-        fa = conn.getUpdateService().saveAndReturnObject(fa)
-        fa = omero.gateway.FileAnnotationWrapper(conn, fa)
-        tgt.linkAnnotation(fa)
+    fa.setFile(fo._obj)
+    fa.setNs(omero.rtypes.rstring(args.namespace))
+    fa = conn.getUpdateService().saveAndReturnObject(fa)
+    fa = omero.gateway.FileAnnotationWrapper(conn, fa)
+    tgt.linkAnnotation(fa)
 
 
 if __name__ == '__main__':
