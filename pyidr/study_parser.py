@@ -114,7 +114,6 @@ class StudyParser(object):
             self._study_lines = f.readlines()
             self._study_lines_used = [
                 [] for x in range(len(self._study_lines))]
-
         self.study = self.parse("Study")
 
         self.parse_publications()
@@ -318,7 +317,42 @@ class StudyParser(object):
         return study_name
 
 
-class Formatter(object):
+class JSONFormatter(object):
+
+    def __init__(self, parser, inspect=False):
+        self.log = logging.getLogger("pyidr.study_parser.JSONFormatter")
+        self.parser = parser
+        self.basedir = os.path.dirname(parser._study_file)
+        self.m = {
+          "Study Name": self.parser.get_study_name(),
+          "Study Accession": self.parser.get_study_accession(),
+          "Experiments": [],
+          "Screens": [],
+        }
+        for key, value in self.parser.parse("Study").items():
+            if key.startswith('Comment'):
+                continue
+            self.m[key] = value
+
+        # Serialize experiments/screens
+        for component in self.parser.components:
+            t = component["Type"]
+            name = component[r"Comment\[IDR %s Name\]" % t]
+            d = {
+              "%s Name": name,
+            }
+            for key, value in component.items():
+                if key.startswith('Comment') or key.startswith('Study'):
+                    continue
+                d[key] = value
+            self.m["%ss" % component['Type']].append(d)
+
+
+    def __str__(self):
+        return json.dumps(self.m, indent=4, sort_keys=True)
+
+
+class OMEROFormatter(object):
 
     EXPERIMENT_SAMPLE_PAIRS = [
         ('Sample Type', "%(Experiment Sample Type)s"),
@@ -646,12 +680,13 @@ def main(argv):
         if unknown:
             print("Found %s unknown keys:" % len(unknown))
             raise Exception("\n".join(unknown))
-        d = Formatter(p, inspect=args.inspect)
 
         if args.report:
+            d = JSONFormatter(p, inspect=args.inspect)
             print(str(d))
 
         if args.check or args.set:
+            d = OMEROFormatter(p)
             d.check(update=args.set)
     return p
 
