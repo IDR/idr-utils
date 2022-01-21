@@ -656,7 +656,7 @@ class OMEROFormatter(object):
                      "%s?show=screen-%s" % (WEBCLIENT_URL, screen.id)))
 
         if not found_toplevel:
-            self.log.error(f'Top level container {self.m["name"]} not found')
+            self.log.warning(f'Top level container {self.m["name"]} not found')
 
         for obj in objects:
             self.check_annotation(
