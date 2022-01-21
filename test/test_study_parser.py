@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from pyidr.study_parser import StudyParser
+from pyidr.study_parser import validate_doi
 import pytest
 
 
@@ -14,7 +14,7 @@ class TestDOI(object):
     ]
 
     def test_missing_key(self):
-        assert StudyParser.parse_data_doi({}, 'Study DOI') == {}
+        assert validate_doi(None) == None
 
     @pytest.mark.parametrize('doi', (
         'https://doi.org/10.17867/10000134',
@@ -22,23 +22,13 @@ class TestDOI(object):
         'http://doi.org/10.17867/10000134',
         'http://dx.doi.org/10.17867/10000134'))
     def test_doi_url_prefixes(self, doi):
-        d = {'Study DOI': doi}
-        assert StudyParser.parse_data_doi(d, 'Study DOI') == {
-            'Data DOI': '10.17867/10000134'}
+        assert validate_doi(doi) == '10.17867/10000134'
 
     def test_invalid_doi_link(self):
-        d = {'Study DOI': 'doi.org/10.17867/10000134'}
         with pytest.raises(Exception):
-            StudyParser.parse_data_doi(d, 'Study DOI')
+            validate_doi('doi.org/10.17867/10000134')
 
     @pytest.mark.parametrize('doi', VALID_DOIS)
-    def test_valid_doi_names(self, doi):
-        d = {'Study DOI': 'https://doi.org/%s' % doi}
-        assert StudyParser.parse_data_doi(d, 'Study DOI') == {
-            'Data DOI': doi}
-
-    @pytest.mark.parametrize('doi', VALID_DOIS)
-    def test_valid_doi_urls(self, doi):
-        d = {'Study DOI': doi}
-        assert StudyParser.parse_data_doi(d, 'Study DOI') == {
-            'Data DOI': doi}
+    def test_valid_dois(self, doi):
+        assert validatate_doi(doi) == doi
+        assert validatate_doi('https://doi.org/%s' % doi) == doi

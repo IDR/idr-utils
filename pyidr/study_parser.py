@@ -98,6 +98,16 @@ STUDY_NS = "idr.openmicroscopy.org/study/info"
 COMPONENTS_NS = "idr.openmicroscopy.org/study/components"
 
 
+def validate_doi(doi):
+    if doi is None:
+        return
+    m = DOI_PATTERN.match(doi)
+    if not DOI_PATTERN.match(doi):
+        raise Exception(
+            "Invalid Data DOI: %s" % doi)
+    return m.group("id")
+
+
 class StudyError(Exception):
     pass
 
@@ -116,7 +126,7 @@ class StudyParser(object):
                 [] for x in range(len(self._study_lines))]
         self.study = self.parse("Study")
         self.validate_publications()
-        self.validate_doi(self.study.get("Study Data DOI", None))
+        validate_doi(self.study.get("Study Data DOI", None))
 
         # Find number of screens and experiments
         n_screens = int(self.study.get('Study Screens Number', 0))
@@ -137,7 +147,7 @@ class StudyParser(object):
         for i in range(n_screens + n_experiments):
             lines, component_type = self.get_lines(i + 1, component_regexp)
             component = self.parse(component_type, lines=lines)
-            self.validate_doi(component.get("%s Data DOI" % component_type, None))
+            validate_doi(component.get("%s Data DOI" % component_type, None))
             self.components.append(component)
 
         self.validate_organisms()
@@ -227,13 +237,6 @@ class StudyParser(object):
         parse_ids("Study DOI", DOI_PATTERN)
 
         return publications
-
-    def validate_doi(self, doi):
-        if doi is None:
-            return
-        if not DOI_PATTERN.match(doi):
-            raise Exception(
-                "Invalid Data DOI: %s" % doi)
 
     def validate_organisms(self):
         for component in self.components:
@@ -355,6 +358,7 @@ class OMEROFormatter(object):
         self.basedir = os.path.dirname(parser._study_file)
         self.inspect = inspect
         self.publications = self.parser.validate_publications()
+        self.study = self.parser.study.copy()
         self.m = {
           "name": self.parser.get_study_name(),
           "accession": self.parser.get_study_accession(),
@@ -363,15 +367,21 @@ class OMEROFormatter(object):
           "screens": [],
         }
 
+        doi_key = "Study Data DOI"
+        doi = validate_doi(self.study.get(doi_key, None))
+        if doi:
+            self.study["Data DOI"] = doi
+
         # Serialize experiments/screens
         for component in self.parser.components.copy():
             component["Type"] = self.parser.get_component_type(component)
-            component.update(self.parser.study)
+            component.update(self.study)
             self.add_annotation_file(component)
             name = component[r"Comment\[IDR %s Name\]" % component["Type"]]
-            if "%s Data DOI" % component["Type"] in component:
-                m = DOI_PATTERN.match(component["%s Data DOI" % component["Type"]])
-                component["Data DOI"] = m.group("id")
+            doi_key = "%s Data DOI" % component["Type"]
+            doi = validate_doi(component.get(doi_key, None))
+            if doi:
+                component["Data DOI"] = doi
             if "%s Organism" % component["Type"] not in component:
                 component["%s Organism" % component["Type"]] = component["Study Organism"]
             d = {
@@ -386,18 +396,15 @@ class OMEROFormatter(object):
             self.m["%ss" % component['Type'].lower()].append(d)
 
         # Add top-level study
+
         d = {
-            "description": self.generate_description(self.parser.study),
-            "map": self.generate_annotation(self.parser.study),
+            "description": self.generate_description(self.study),
+            "map": self.generate_annotation(self.study),
         }
         self.m.update(d)
 
     def __str__(self):
         return json.dumps(self.m, indent=4, sort_keys=True)
-
-    def format_data_doi(d, key):
-        m = DOI_PATTERN.match(d[key])
-        return {"Data DOI": m.group("id")}
 
     def add_annotation_file(self, component):
         import glob
