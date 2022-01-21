@@ -260,6 +260,9 @@ class StudyParser(object):
             name = component.get(r"Comment\[IDR %s Name\]" % t, None)
             if name is None:
                 raise Exception("Missing %s name" % t)
+            if not name.startswith(self.study["Study Accession"]):
+                raise Exception("%s does not start with %s" % (
+                    name, self.study["Study Accession"]))
             if study_name is None:
                 study_name = name.split("/")[0]
             else:
@@ -388,8 +391,9 @@ class OMEROFormatter(object):
             if "%s Organism" % component["Type"] not in component:
                 organism_key = "%s Organism" % component["Type"]
                 component[organism_key] = component["Study Organism"]
+            name = component["%s Name" % component["Type"]]
             d = {
-              "name": component["%s Name" % component["Type"]],
+              "name": name,
               "description": self.generate_description(component),
               "map": self.generate_annotation(component),
             }
