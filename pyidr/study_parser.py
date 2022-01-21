@@ -115,11 +115,8 @@ class StudyParser(object):
             self._study_lines_used = [
                 [] for x in range(len(self._study_lines))]
         self.study = self.parse("Study")
-
-        self.parse_publications()
-        self.study.update(self.parse_data_doi(self.study, "Study Data DOI"))
-
-        self.components = []
+        self.validate_publications()
+        self.validate_doi(self.study.get("Study Data DOI", None))
 
         # Find number of screens and experiments
         n_screens = int(self.study.get('Study Screens Number', 0))
@@ -136,18 +133,14 @@ class StudyParser(object):
             raise Exception("Not enough screens and/or experiments")
 
         # Find all study components in order
+        self.components = []
         for i in range(n_screens + n_experiments):
             lines, component_type = self.get_lines(i + 1, component_regexp)
-            d = self.parse(component_type, lines=lines)
-            d.update({'Type': component_type})
-            d.update(self.study)
-            doi = self.parse_data_doi(d, "%s Data DOI" % component_type)
-            if doi:
-                d.update(doi)
-            self.parse_annotation_file(d)
-            self.parse_organism(d)
-            self.components.append(d)
+            component = self.parse(component_type, lines=lines)
+            self.validate_doi(component.get("%s Data DOI" % component_type, None))
+            self.components.append(component)
 
+        self.validate_organisms()
         if not self.components:
             raise Exception("Need to define at least one screen or experiment")
 
@@ -204,59 +197,14 @@ class StudyParser(object):
             raise Exception("Could not find %s %g" % (component_regexp, index))
         return lines, component_type
 
-    def parse_annotation_file(self, component):
-        import glob
-
-        accession_number = self.get_study_accession()
-        pattern = re.compile(r"(%s-\w+(-\w+)?)/(\w+)$" % accession_number)
-        name = component[r"Comment\[IDR %s Name\]" % component["Type"]]
-        m = pattern.match(name)
-        if not m:
-            raise Exception("Unmatched name %s" % name)
-
-        # Check for annotation.csv file
-        component_path = os.path.join(self._dir, m.group(3))
-        basename = "%s-%s-annotation" % (accession_number, m.group(3))
-
-        # Generate GitHub annotation URL
-        if os.path.exists(os.path.join(self._dir, ".git")):
-            base_gh_url = "https://github.com/IDR/%s/blob/HEAD/%s" % (
-                m.group(1), m.group(3))
-        else:
-            base_gh_url = (
-                "https://github.com/IDR/idr-metadata/blob/HEAD/%s" % name)
-
-        # Try to find single annotation file in root directory
-        for extension in ['.csv', '.csv.gz']:
-            annotation_filename = "%s%s" % (basename, extension)
-            annotation_path = os.path.join(component_path, annotation_filename)
-            if os.path.exists(annotation_path):
-                component["Annotations"] = [{
-                    "Annotation File": "%s %s" % (
-                        annotation_filename, base_gh_url + "/%s" %
-                        annotation_filename)}]
-                return
-
-        component["Annotations"] = []
-        annotation_filenames = sorted(glob.glob(os.path.join(
-            component_path, "**", "%s.csv.gz" % basename)))
-        for annotation_filename in annotation_filenames:
-            component["Annotations"].append({
-                "Annotation File": "%s %s" % (
-                    os.path.basename(annotation_filename),
-                    base_gh_url + "%s" %
-                    annotation_filename[len(component_path):])
-            })
-        return
-
-    def parse_publications(self):
+    def validate_publications(self):
 
         titles = self.study['Study Publication Title'].split('\t')
         authors = self.study['Study Author List'].split('\t')
         assert len(titles) == len(authors), (
             "Mismatching publication titles and authors")
         if titles == [''] and authors == ['']:
-            return
+            return []
 
         publications = [{"Title": title, "Author List": author}
                         for title, author in zip(titles, authors)]
@@ -278,29 +226,23 @@ class StudyParser(object):
         parse_ids("Study PMC ID", re.compile(r"(?P<id>PMC\d+)"))
         parse_ids("Study DOI", DOI_PATTERN)
 
-        self.study["Publications"] = publications
+        return publications
 
-    @staticmethod
-    def parse_data_doi(d, key):
-        if key not in d:
-            return {}
-        m = DOI_PATTERN.match(d[key])
-        if not m:
+    def validate_doi(self, doi):
+        if doi is None:
+            return
+        if not DOI_PATTERN.match(doi):
             raise Exception(
-                "Invalid Data DOI: %s" % d[key])
-        return {"Data DOI": m.group("id")}
+                "Invalid Data DOI: %s" % doi)
 
-    @staticmethod
-    def parse_organism(component):
-        key = '%s Organism' % component['Type']
-        if 'Study Organism' in component and key in component:
-            raise Exception("Organism defined both at the study and %s level"
-                            % component['Type'])
-        elif 'Study Organism' not in component and key not in component:
-            raise Exception("Missing organism field")
-        elif 'Study Organism' in component:
-            component[key] = component['Study Organism']
-        return
+    def validate_organisms(self):
+        for component in self.components:
+            key = "%s Organism" % self.get_component_type(component)
+            if 'Study Organism' in self.study and key in component:
+                raise Exception(
+                    "Organism defined both at the study and component level")
+            elif 'Study Organism' not in self.study and key not in component:
+                raise Exception("Missing organism field")
 
     def get_study_accession(self):
         return self.study[r"Comment\[IDR Study Accession\]"]
@@ -308,13 +250,20 @@ class StudyParser(object):
     def get_study_name(self):
         study_name = None
         for component in self.components:
-            name = component[r"Comment\[IDR %s Name\]" % component["Type"]]
+            name = component[r"Comment\[IDR %s Name\]" % self.get_component_type(component)]
             if study_name is None:
                 study_name = name.split("/")[0]
             else:
                 assert study_name == name.split("/")[0], (
                     "%s != %s" % (study_name, name.split("/")[0]))
         return study_name
+
+    @staticmethod
+    def get_component_type(component):
+        if "Screen Number" in component:
+            return "Screen"
+        else:
+            return "Experiment"
 
 
 class JSONFormatter(object):
@@ -336,16 +285,16 @@ class JSONFormatter(object):
 
         # Serialize experiments/screens
         for component in self.parser.components:
-            t = component["Type"]
-            name = component[r"Comment\[IDR %s Name\]" % t]
+            component_type = self.parser.get_component_type(component)
+            name = component[r"Comment\[IDR %s Name\]" % component_type]
             d = {
-              "%s Name": name,
+              "%s Name" % component_type: name,
             }
             for key, value in component.items():
-                if key.startswith('Comment') or key.startswith('Study'):
+                if key.startswith('Comment'):
                     continue
                 d[key] = value
-            self.m["%ss" % component['Type']].append(d)
+            self.m["%ss" % component_type].append(d)
 
 
     def __str__(self):
@@ -405,6 +354,7 @@ class OMEROFormatter(object):
         self.parser = parser
         self.basedir = os.path.dirname(parser._study_file)
         self.inspect = inspect
+        self.publications = self.parser.validate_publications()
         self.m = {
           "name": self.parser.get_study_name(),
           "accession": self.parser.get_study_accession(),
@@ -414,8 +364,16 @@ class OMEROFormatter(object):
         }
 
         # Serialize experiments/screens
-        for component in self.parser.components:
+        for component in self.parser.components.copy():
+            component["Type"] = self.parser.get_component_type(component)
+            component.update(self.parser.study)
+            self.add_annotation_file(component)
             name = component[r"Comment\[IDR %s Name\]" % component["Type"]]
+            if "%s Data DOI" % component["Type"] in component:
+                m = DOI_PATTERN.match(component["%s Data DOI" % component["Type"]])
+                component["Data DOI"] = m.group("id")
+            if "%s Organism" % component["Type"] not in component:
+                component["%s Organism" % component["Type"]] = component["Study Organism"]
             d = {
               "name": name,
               "description": self.generate_description(component),
@@ -436,6 +394,55 @@ class OMEROFormatter(object):
 
     def __str__(self):
         return json.dumps(self.m, indent=4, sort_keys=True)
+
+    def format_data_doi(d, key):
+        m = DOI_PATTERN.match(d[key])
+        return {"Data DOI": m.group("id")}
+
+    def add_annotation_file(self, component):
+        import glob
+
+        accession_number = self.parser.get_study_accession()
+        pattern = re.compile(r"(%s-\w+(-\w+)?)/(\w+)$" % accession_number)
+        name = component[r"Comment\[IDR %s Name\]" % component["Type"]]
+        m = pattern.match(name)
+        if not m:
+            raise Exception("Unmatched name %s" % name)
+
+        # Check for annotation.csv file
+        component_path = os.path.join(self.parser._dir, m.group(3))
+        basename = "%s-%s-annotation" % (accession_number, m.group(3))
+
+        # Generate GitHub annotation URL
+        if os.path.exists(os.path.join(self.parser._dir, ".git")):
+            base_gh_url = "https://github.com/IDR/%s/blob/HEAD/%s" % (
+                m.group(1), m.group(3))
+        else:
+            base_gh_url = (
+                "https://github.com/IDR/idr-metadata/blob/HEAD/%s" % name)
+
+        # Try to find single annotation file in root directory
+        for extension in ['.csv', '.csv.gz']:
+            annotation_filename = "%s%s" % (basename, extension)
+            annotation_path = os.path.join(component_path, annotation_filename)
+            if os.path.exists(annotation_path):
+                component["Annotations"] = [{
+                    "Annotation File": "%s %s" % (
+                        annotation_filename, base_gh_url + "/%s" %
+                        annotation_filename)}]
+                return
+
+        component["Annotations"] = []
+        annotation_filenames = sorted(glob.glob(os.path.join(
+            component_path, "**", "%s.csv.gz" % basename)))
+        for annotation_filename in annotation_filenames:
+            component["Annotations"].append({
+                "Annotation File": "%s %s" % (
+                    os.path.basename(annotation_filename),
+                    base_gh_url + "%s" %
+                    annotation_filename[len(component_path):])
+            })
+        return
 
     def generate_description(self, component):
         """Generate the description of the study/experiment/screen"""
@@ -459,6 +466,37 @@ class OMEROFormatter(object):
 
         return publication_title + component_title + history
 
+    def get_publications(self):
+
+        titles = self.study['Study Publication Title'].split('\t')
+        authors = self.study['Study Author List'].split('\t')
+        assert len(titles) == len(authors), (
+            "Mismatching publication titles and authors")
+        if titles == [''] and authors == ['']:
+            return []
+
+        publications = [{"Title": title, "Author List": author}
+                        for title, author in zip(titles, authors)]
+
+        def parse_ids(key, pattern):
+            if key not in self.study:
+                return
+            split_ids = self.study[key].split('\t')
+            key2 = key.strip("Study ")
+            for i in range(len(split_ids)):
+                if not split_ids[i]:
+                    continue
+                m = pattern.match(split_ids[i])
+                if not m:
+                    raise Exception("Invalid %s: %s" % (key2, split_ids[i]))
+                publications[i][key2] = m.group("id")
+
+        parse_ids("Study PubMed ID", re.compile(r"(?P<id>\d+)"))
+        parse_ids("Study PMC ID", re.compile(r"(?P<id>PMC\d+)"))
+        parse_ids("Study DOI", DOI_PATTERN)
+
+        return publications
+
     def generate_annotation(self, component):
         """Generate the map annotation of the study/experiment/screen"""
 
@@ -478,8 +516,7 @@ class OMEROFormatter(object):
             add_key_values(component, self.SCREEN_SAMPLE_PAIRS)
 
         # Only add Study title if not redundant with Publication Title
-        publication_titles = [
-            x['Title'] for x in component.get("Publications", [])]
+        publication_titles = [x['Title'] for x in self.publications]
         study_title = component.get("Study Title", None)
         if study_title is not None and study_title not in publication_titles:
             add_key_values(component, [('Study Title', "%(Study Title)s")])
@@ -489,7 +526,7 @@ class OMEROFormatter(object):
         elif component.get("Type", None) == "Screen":
             add_key_values(component, self.SCREEN_TECHNOLOGY_PAIRS)
 
-        for publication in component.get("Publications", []):
+        for publication in self.publications:
             add_key_values(publication, self.PUBLICATION_PAIRS)
         add_key_values(component, self.BOTTOM_PAIRS)
         for annotation in component.get("Annotations", []):
