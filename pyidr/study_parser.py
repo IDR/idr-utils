@@ -127,6 +127,7 @@ class StudyParser(object):
         self.study = self.parse("Study")
         self.validate_publications()
         validate_doi(self.study.get("Study Data DOI", None))
+        self.validate_accession()
 
         # Find number of screens and experiments
         n_screens = int(self.study.get('Study Screens Number', 0))
@@ -150,6 +151,7 @@ class StudyParser(object):
             validate_doi(component.get("%s Data DOI" % component_type, None))
             self.components.append(component)
 
+        self.validate_names()
         self.validate_organisms()
         if not self.components:
             raise Exception("Need to define at least one screen or experiment")
@@ -247,20 +249,24 @@ class StudyParser(object):
             elif 'Study Organism' not in self.study and key not in component:
                 raise Exception("Missing organism field")
 
-    def get_study_accession(self):
-        return self.study[r"Comment\[IDR Study Accession\]"]
+    def validate_accession(self):
+        self.study["Study Accession"] = self.study[
+            r"Comment\[IDR Study Accession\]"]
 
-    def get_study_name(self):
+    def validate_names(self):
         study_name = None
         for component in self.components:
-            key = "Comment[IDR %s Name]" % self.get_component_type(component)
-            name = component[key]
+            t = self.get_component_type(component)
+            name = component.get(r"Comment\[IDR %s Name\]" % t, None)
+            if name is None:
+                raise Exception("Missing %s name" % t)
             if study_name is None:
                 study_name = name.split("/")[0]
             else:
                 assert study_name == name.split("/")[0], (
                     "%s != %s" % (study_name, name.split("/")[0]))
-        return study_name
+            component["%s Name" % t] = name
+        self.study["Study Name"] = study_name
 
     @staticmethod
     def get_component_type(component):
@@ -277,12 +283,10 @@ class JSONFormatter(object):
         self.parser = parser
         self.basedir = os.path.dirname(parser._study_file)
         self.m = {
-          "Study Name": self.parser.get_study_name(),
-          "Study Accession": self.parser.get_study_accession(),
           "Experiments": [],
           "Screens": [],
         }
-        for key, value in self.parser.parse("Study").items():
+        for key, value in self.parser.study.items():
             if key.startswith('Comment'):
                 continue
             self.m[key] = value
@@ -360,8 +364,8 @@ class OMEROFormatter(object):
         self.publications = self.parser.validate_publications()
         self.study = self.parser.study.copy()
         self.m = {
-          "name": self.parser.get_study_name(),
-          "accession": self.parser.get_study_accession(),
+          "name": self.study["Study Name"],
+          "accession": self.study["Study Accession"],
           "source": self.parser._study_file,
           "experiments": [],
           "screens": [],
@@ -377,7 +381,6 @@ class OMEROFormatter(object):
             component["Type"] = self.parser.get_component_type(component)
             component.update(self.study)
             self.add_annotation_file(component)
-            name = component[r"Comment\[IDR %s Name\]" % component["Type"]]
             doi_key = "%s Data DOI" % component["Type"]
             doi = validate_doi(component.get(doi_key, None))
             if doi:
@@ -386,7 +389,7 @@ class OMEROFormatter(object):
                 organism_key = "%s Organism" % component["Type"]
                 component[organism_key] = component["Study Organism"]
             d = {
-              "name": name,
+              "name": component["%s Name" % component["Type"]],
               "description": self.generate_description(component),
               "map": self.generate_annotation(component),
             }
@@ -410,7 +413,7 @@ class OMEROFormatter(object):
     def add_annotation_file(self, component):
         import glob
 
-        accession_number = self.parser.get_study_accession()
+        accession_number = self.study["Study Accession"]
         pattern = re.compile(r"(%s-\w+(-\w+)?)/(\w+)$" % accession_number)
         name = component[r"Comment\[IDR %s Name\]" % component["Type"]]
         m = pattern.match(name)
