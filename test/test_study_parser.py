@@ -14,7 +14,7 @@ class TestDOI(object):
     ]
 
     def test_missing_key(self):
-        assert validate_doi(None) == None
+        assert validate_doi(None) is None
 
     @pytest.mark.parametrize('doi', (
         'https://doi.org/10.17867/10000134',
@@ -30,5 +30,5 @@ class TestDOI(object):
 
     @pytest.mark.parametrize('doi', VALID_DOIS)
     def test_valid_dois(self, doi):
-        assert validatate_doi(doi) == doi
-        assert validatate_doi('https://doi.org/%s' % doi) == doi
+        assert validate_doi(doi) == doi
+        assert validate_doi('https://doi.org/%s' % doi) == doi

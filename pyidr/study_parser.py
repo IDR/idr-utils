@@ -253,7 +253,8 @@ class StudyParser(object):
     def get_study_name(self):
         study_name = None
         for component in self.components:
-            name = component[r"Comment\[IDR %s Name\]" % self.get_component_type(component)]
+            key = "Comment[IDR %s Name]" % self.get_component_type(component)
+            name = component[key]
             if study_name is None:
                 study_name = name.split("/")[0]
             else:
@@ -298,7 +299,6 @@ class JSONFormatter(object):
                     continue
                 d[key] = value
             self.m["%ss" % component_type].append(d)
-
 
     def __str__(self):
         return json.dumps(self.m, indent=4, sort_keys=True)
@@ -383,7 +383,8 @@ class OMEROFormatter(object):
             if doi:
                 component["Data DOI"] = doi
             if "%s Organism" % component["Type"] not in component:
-                component["%s Organism" % component["Type"]] = component["Study Organism"]
+                organism_key = "%s Organism" % component["Type"]
+                component[organism_key] = component["Study Organism"]
             d = {
               "name": name,
               "description": self.generate_description(component),
