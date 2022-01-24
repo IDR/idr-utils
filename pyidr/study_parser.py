@@ -84,7 +84,7 @@ KEYS = (
     Key('Screen Sample Type', 'Screen', multiple=True),
     Key('Screen Imaging Method', 'Screen', multiple=True),
     Key('Screen Number', 'Screen'),
-    Key('Screen Type', 'Screen', multiple=True),
+    Key('Screen Type', 'Screen', optional=True, multiple=True),
     # OPTIONAL_KEYS["Screen"]
     Key('Screen Data DOI', 'Screen', optional=True),
     Key('Screen Data Publisher', 'Screen', optional=True),
@@ -485,7 +485,6 @@ class OMEROFormatter(object):
         authorlists = self.study['Study Author List']
         pubmeds = self.study.get('Study PubMed ID', [])
         pmcs = self.study.get('Study PMC ID', [])
-        print(pmcs)
         dois = self.study.get('Study DOI', [])
         if titles == [''] and authorlists == ['']:
             return []
