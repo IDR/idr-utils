@@ -109,7 +109,7 @@ def validate_doi(doi):
     if doi is None:
         return
     m = DOI_PATTERN.match(doi)
-    if not DOI_PATTERN.match(doi):
+    if not m:
         raise Exception(
             "Invalid Data DOI: %s" % doi)
     return m.group("id")
@@ -486,12 +486,12 @@ class OMEROFormatter(object):
     def get_publications(self):
 
         publications = []
-        titles = self.study['Study Publication Title']
-        authorlists = self.study['Study Author List']
+        titles = self.study.get("Study Publication Title", [])
+        authorlists = self.study.get("Study Author List", [])
         pubmeds = self.study.get('Study PubMed ID', [])
         pmcs = self.study.get('Study PMC ID', [])
         dois = self.study.get('Study DOI', [])
-        if titles == [''] and authorlists == ['']:
+        if titles == [] and authorlists == []:
             return []
 
         for it in itertools.zip_longest(
