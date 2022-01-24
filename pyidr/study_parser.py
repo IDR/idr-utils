@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 
 from builtins import str
-from builtins import zip
 from builtins import range
 from builtins import object
 from argparse import ArgumentParser
@@ -37,8 +36,10 @@ KEYS = (
     Key('Study Publication Title', 'Study', optional=True, multiple=True),
     Key('Study Author List', 'Study', optional=True, multiple=True),
     Key('Study Organism', 'Study', optional=True, multiple=True),
-    Key('Study Organism Term Source REF', 'Study', optional=True, multiple=True),
-    Key('Study Organism Term Accession', 'Study', optional=True, multiple=True),
+    Key('Study Organism Term Source REF', 'Study', optional=True,
+        multiple=True),
+    Key('Study Organism Term Accession', 'Study', optional=True,
+        multiple=True),
     # OPTIONAL_KEYS["Study"]
     Key('Study Version History', 'Study', optional=True),
     Key('Study BioStudies Accession', 'Study', optional=True),
@@ -76,8 +77,10 @@ KEYS = (
     Key('Experiment Data DOI', 'Experiment', optional=True),
     Key("Experiment Data Publisher", 'Experiment', optional=True),
     Key('Experiment Organism', 'Experiment', optional=True, multiple=True),
-    Key('Experiment Organism Term Source REF', 'Experiment', optional=True, multiple=True),
-    Key('Experiment Organism Term Accession', 'Experiment', optional=True, multiple=True),
+    Key('Experiment Organism Term Source REF', 'Experiment', optional=True,
+        multiple=True),
+    Key('Experiment Organism Term Accession', 'Experiment', optional=True,
+        multiple=True),
     # MANDATORY_KEYS["Screen"]
     Key(r'Comment\[IDR Screen Name\]', 'Screen'),
     Key('Screen Description', 'Screen'),
@@ -90,8 +93,10 @@ KEYS = (
     Key('Screen Data Publisher', 'Screen', optional=True),
     Key('Screen Technology Type', 'Screen', optional=True, multiple=True),
     Key('Screen Organism', 'Screen', optional=True, multiple=True),
-    Key('Screen Organism Term Source REF', 'Screen', optional=True, multiple=True),
-    Key('Screen Organism Term Accession', 'Screen', optional=True, multiple=True),
+    Key('Screen Organism Term Source REF', 'Screen', optional=True,
+        multiple=True),
+    Key('Screen Organism Term Accession', 'Screen', optional=True,
+        multiple=True),
 )
 
 DOI_PATTERN = re.compile(
@@ -223,7 +228,7 @@ class StudyParser(object):
         authors = self.study.get('Study Author List', [])
         assert len(titles) == len(authors), (
             "Mismatching publication titles and authors")
-        
+
         for doi in self.study.get("Study DOI", []):
             validate_doi(doi)
 
@@ -489,7 +494,8 @@ class OMEROFormatter(object):
         if titles == [''] and authorlists == ['']:
             return []
 
-        for it in itertools.zip_longest(titles, authorlists, pubmeds, pmcs, dois):
+        for it in itertools.zip_longest(
+                titles, authorlists, pubmeds, pmcs, dois):
             title, authorlist, pubmed, pmc, doi = it
             publication = {"Title": title, "Author List": authorlist}
             if pubmed:
@@ -511,7 +517,6 @@ class OMEROFormatter(object):
                         s.append({name: value})
                 else:
                     self.log.debug("Missing key %s" % key)
-
 
         def format_key_values(d, pairs):
             for name, formatter in pairs:
