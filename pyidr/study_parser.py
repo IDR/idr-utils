@@ -532,7 +532,7 @@ class OMEROFormatter(object):
         publication_titles = [x['Title'] for x in publications]
         study_title = component.get("Study Title", None)
         if study_title is not None and study_title not in publication_titles:
-            add_key_values(component, [('Study Title', "%(Study Title)s")])
+            format_key_values(component, [('Study Title', "%(Study Title)s")])
 
         if component.get("Type", None) == "Experiment":
             add_key_values(component, self.EXPERIMENT_TECHNOLOGY_PAIRS)
