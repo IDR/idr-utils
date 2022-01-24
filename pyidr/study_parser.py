@@ -5,6 +5,7 @@ from builtins import zip
 from builtins import range
 from builtins import object
 from argparse import ArgumentParser
+import itertools
 import glob
 import json
 import logging
@@ -18,10 +19,11 @@ TYPES = ["Experiment", "Screen"]
 
 class Key(object):
 
-    def __init__(self, pattern, scope, optional=False):
-        self.pattern = pattern
+    def __init__(self, name, scope, optional=False, multiple=False):
+        self.name = name
         self.scope = scope
         self.optional = optional
+        self.multiple = multiple
 
 
 KEYS = (
@@ -29,23 +31,23 @@ KEYS = (
     Key(r'Comment\[IDR Study Accession\]', 'Study'),
     Key('Study Title', 'Study'),
     Key('Study Description', 'Study'),
-    Key('Study Type', 'Study'),
-    Key('Study Type Term Source REF', 'Study', optional=True),
-    Key('Study Type Term Accession', 'Study', optional=True),
-    Key('Study Publication Title', 'Study'),
-    Key('Study Author List', 'Study'),
-    Key('Study Organism', 'Study', optional=True),
-    Key('Study Organism Term Source REF', 'Study', optional=True),
-    Key('Study Organism Term Accession', 'Study', optional=True),
+    Key('Study Type', 'Study', multiple=True),
+    Key('Study Type Term Source REF', 'Study', optional=True, multiple=True),
+    Key('Study Type Term Accession', 'Study', optional=True, multiple=True),
+    Key('Study Publication Title', 'Study', optional=True, multiple=True),
+    Key('Study Author List', 'Study', optional=True, multiple=True),
+    Key('Study Organism', 'Study', optional=True, multiple=True),
+    Key('Study Organism Term Source REF', 'Study', optional=True, multiple=True),
+    Key('Study Organism Term Accession', 'Study', optional=True, multiple=True),
     # OPTIONAL_KEYS["Study"]
     Key('Study Version History', 'Study', optional=True),
     Key('Study BioStudies Accession', 'Study', optional=True),
     Key('Study BioImage Archive Accession', 'Study', optional=True),
     Key('Study EMPIAR Accession', 'Study', optional=True),
     Key('Study Publication Preprint', 'Study', optional=True),
-    Key('Study PubMed ID', 'Study', optional=True),
-    Key('Study PMC ID', 'Study', optional=True),
-    Key('Study DOI', 'Study', optional=True),
+    Key('Study PubMed ID', 'Study', optional=True, multiple=True),
+    Key('Study PMC ID', 'Study', optional=True, multiple=True),
+    Key('Study DOI', 'Study', optional=True, multiple=True),
     Key('Study Copyright', 'Study', optional=True),
     Key('Study License', 'Study', optional=True),
     Key('Study License URL', 'Study', optional=True),
@@ -53,43 +55,43 @@ KEYS = (
     Key('Study Data DOI', 'Study', optional=True),
     Key('Study Experiments Number', 'Study', optional=True),
     Key('Study Screens Number', 'Study', optional=True),
-    Key('Study External URL', 'Study', optional=True),
+    Key('Study External URL', 'Study', optional=True, multiple=True),
     Key('Study Public Release Date', 'Study'),
-    Key('Study Person Last Name', 'Study', optional=True),
-    Key('Study Person First Name', 'Study', optional=True),
-    Key('Study Person Email', 'Study', optional=True),
-    Key('Study Person Address', 'Study', optional=True),
-    Key('Study Person Roles', 'Study', optional=True),
-    Key('Study Person ORCID', 'Study', optional=True),
-    Key('Study Key Words', 'Study', optional=True),
-    Key('Term Source Name', 'Study', optional=True),
-    Key('Term Source URI', 'Study', optional=True),
+    Key('Study Person Last Name', 'Study', optional=True, multiple=True),
+    Key('Study Person First Name', 'Study', optional=True, multiple=True),
+    Key('Study Person Email', 'Study', optional=True, multiple=True),
+    Key('Study Person Address', 'Study', optional=True, multiple=True),
+    Key('Study Person Roles', 'Study', optional=True, multiple=True),
+    Key('Study Person ORCID', 'Study', optional=True, multiple=True),
+    Key('Study Key Words', 'Study', optional=True, multiple=True),
+    Key('Term Source Name', 'Study', optional=True, multiple=True),
+    Key('Term Source URI', 'Study', optional=True, multiple=True),
     # MANDATORY_KEYS["Experiment"]
     Key(r'Comment\[IDR Experiment Name\]', 'Experiment'),
     Key('Experiment Description', 'Experiment'),
-    Key('Experiment Sample Type', 'Experiment'),
-    Key('Experiment Imaging Method', 'Experiment'),
+    Key('Experiment Sample Type', 'Experiment', multiple=True),
+    Key('Experiment Imaging Method', 'Experiment', multiple=True),
     Key('Experiment Number', 'Experiment'),
     # OPTIONAL_KEYS["Experiment"]
     Key('Experiment Data DOI', 'Experiment', optional=True),
     Key("Experiment Data Publisher", 'Experiment', optional=True),
-    Key('Experiment Organism', 'Experiment', optional=True),
-    Key('Experiment Organism Term Source REF', 'Experiment', optional=True),
-    Key('Experiment Organism Term Accession', 'Experiment', optional=True),
+    Key('Experiment Organism', 'Experiment', optional=True, multiple=True),
+    Key('Experiment Organism Term Source REF', 'Experiment', optional=True, multiple=True),
+    Key('Experiment Organism Term Accession', 'Experiment', optional=True, multiple=True),
     # MANDATORY_KEYS["Screen"]
     Key(r'Comment\[IDR Screen Name\]', 'Screen'),
     Key('Screen Description', 'Screen'),
-    Key('Screen Sample Type', 'Screen'),
-    Key('Screen Imaging Method', 'Screen'),
+    Key('Screen Sample Type', 'Screen', multiple=True),
+    Key('Screen Imaging Method', 'Screen', multiple=True),
     Key('Screen Number', 'Screen'),
-    Key('Screen Type', 'Screen'),
+    Key('Screen Type', 'Screen', multiple=True),
     # OPTIONAL_KEYS["Screen"]
     Key('Screen Data DOI', 'Screen', optional=True),
     Key('Screen Data Publisher', 'Screen', optional=True),
-    Key('Screen Technology Type', 'Screen', optional=True),
-    Key('Screen Organism', 'Screen', optional=True),
-    Key('Screen Organism Term Source REF', 'Screen', optional=True),
-    Key('Screen Organism Term Accession', 'Screen', optional=True),
+    Key('Screen Technology Type', 'Screen', optional=True, multiple=True),
+    Key('Screen Organism', 'Screen', optional=True, multiple=True),
+    Key('Screen Organism Term Source REF', 'Screen', optional=True, multiple=True),
+    Key('Screen Organism Term Accession', 'Screen', optional=True, multiple=True),
 )
 
 DOI_PATTERN = re.compile(
@@ -157,7 +159,7 @@ class StudyParser(object):
             raise Exception("Need to define at least one screen or experiment")
 
     def get_value(self, key, expr=".*", fail_on_missing=True, lines=None):
-        pattern = re.compile("^%s\t(%s)" % (key, expr))
+        pattern = re.compile("^%s\t(%s)" % (key.name, expr))
         if lines:
             # Fake space since we don't know what the caller is passing
             used = [[] for x in range(len(lines))]
@@ -167,23 +169,29 @@ class StudyParser(object):
         for idx, line in enumerate(lines):
             m = pattern.match(line)
             if m:
-                used[idx].append(("get_value", key, expr))
-                return m.group(1).rstrip()
+                used[idx].append(("get_value", key.name, expr))
+                val = m.group(1).rstrip()
+                if val == "":
+                    continue
+                if key.multiple:
+                    return val.split('\t')
+                else:
+                    return val
         if fail_on_missing:
-            raise Exception("Could not find value for key %s " % key)
+            raise Exception("Could not find value for key %s " % key.name)
 
     def parse(self, scope, lines=None):
         d = {}
-        mandatory_keys = [x.pattern for x in KEYS
+        mandatory_keys = [x for x in KEYS
                           if x.scope == scope and not x.optional]
-        optional_keys = [x.pattern for x in KEYS
+        optional_keys = [x for x in KEYS
                          if x.scope == scope and x.optional]
         for key in mandatory_keys:
-            d[key] = self.get_value(key, lines=lines)
+            d[key.name] = self.get_value(key, lines=lines)
         for key in optional_keys:
             value = self.get_value(key, fail_on_missing=False, lines=lines)
             if value:
-                d[key] = value
+                d[key.name] = value
         return d
 
     def get_lines(self, index, component_regexp):
@@ -211,34 +219,23 @@ class StudyParser(object):
 
     def validate_publications(self):
 
-        titles = self.study['Study Publication Title'].split('\t')
-        authors = self.study['Study Author List'].split('\t')
+        titles = self.study.get('Study Publication Title', [])
+        authors = self.study.get('Study Author List', [])
         assert len(titles) == len(authors), (
             "Mismatching publication titles and authors")
-        if titles == [''] and authors == ['']:
-            return []
+        
+        for doi in self.study.get("Study DOI", []):
+            validate_doi(doi)
 
-        publications = [{"Title": title, "Author List": author}
-                        for title, author in zip(titles, authors)]
+        for pubmed_id in self.study.get("Study PubMed ID", []):
+            pattern = re.compile(r"(?P<id>\d+)")
+            if pubmed_id != '' and not pattern.match(pubmed_id):
+                raise Exception("Invalid PubMed ID: %s" % pubmed_id)
 
-        def parse_ids(key, pattern):
-            if key not in self.study:
-                return
-            split_ids = self.study[key].split('\t')
-            key2 = key.strip("Study ")
-            for i in range(len(split_ids)):
-                if not split_ids[i]:
-                    continue
-                m = pattern.match(split_ids[i])
-                if not m:
-                    raise Exception("Invalid %s: %s" % (key2, split_ids[i]))
-                publications[i][key2] = m.group("id")
-
-        parse_ids("Study PubMed ID", re.compile(r"(?P<id>\d+)"))
-        parse_ids("Study PMC ID", re.compile(r"(?P<id>PMC\d+)"))
-        parse_ids("Study DOI", DOI_PATTERN)
-
-        return publications
+        for pmc_id in self.study.get("Study PMC ID", []):
+            pattern = re.compile(r"(?P<id>PMC\d+)")
+            if pmc_id != '' and not pattern.match(pmc_id):
+                raise Exception("Invalid PMC ID: %s" % pmc_id)
 
     def validate_organisms(self):
         for component in self.components:
@@ -314,22 +311,22 @@ class JSONFormatter(object):
 class OMEROFormatter(object):
 
     EXPERIMENT_SAMPLE_PAIRS = [
-        ('Sample Type', "%(Experiment Sample Type)s"),
-        ('Organism', "%(Experiment Organism)s"),
+        ('Sample Type', "Experiment Sample Type"),
+        ('Organism', "Experiment Organism"),
     ]
     SCREEN_SAMPLE_PAIRS = [
-        ('Sample Type', "%(Screen Sample Type)s"),
-        ('Organism', "%(Screen Organism)s"),
+        ('Sample Type', "Screen Sample Type"),
+        ('Organism', "Screen Organism"),
     ]
     EXPERIMENT_TECHNOLOGY_PAIRS = [
-        ('Study Type', "%(Study Type)s"),
-        ('Imaging Method', "%(Experiment Imaging Method)s"),
+        ('Study Type', "Study Type"),
+        ('Imaging Method', "Experiment Imaging Method"),
     ]
     SCREEN_TECHNOLOGY_PAIRS = [
-        ('Study Type', "%(Study Type)s"),
-        ('Screen Type', "%(Screen Type)s"),
-        ('Screen Technology Type', "%(Screen Technology Type)s"),
-        ('Imaging Method', "%(Screen Imaging Method)s"),
+        ('Study Type', "Study Type"),
+        ('Screen Type', "Screen Type"),
+        ('Screen Technology Type', "Screen Technology Type"),
+        ('Imaging Method', "Screen Imaging Method"),
     ]
     PUBLICATION_PAIRS = [
         ('Publication Title', "%(Title)s"),
@@ -340,14 +337,15 @@ class OMEROFormatter(object):
          "%(PMC ID)s https://www.ncbi.nlm.nih.gov/pmc/articles/%(PMC ID)s"),
         ('Publication DOI', "%(DOI)s https://doi.org/%(DOI)s"),
     ]
-    BOTTOM_PAIRS = [
+    DATA_PAIRS = [
         ('Release Date', '%(Study Public Release Date)s'),
         ('License', "%(Study License)s %(Study License URL)s"),
         ('Copyright', "%(Study Copyright)s"),
         ('Data Publisher', "%(Study Data Publisher)s"),
         ('Data DOI', "%(Data DOI)s "
-         "https://doi.org/%(Data DOI)s"),
-        ('External URL', "%(Study External URL)s"),
+         "https://doi.org/%(Data DOI)s")
+    ]
+    ACCESSION_PAIRS = [
         ('BioStudies Accession', "%(Study BioImage Archive Accession)s"
          " https://www.ebi.ac.uk/biostudies/studies/"
          "%(Study BioImage Archive Accession)s"),
@@ -364,7 +362,6 @@ class OMEROFormatter(object):
         self.parser = parser
         self.basedir = os.path.dirname(parser._study_file)
         self.inspect = inspect
-        self.publications = self.parser.validate_publications()
         self.study = self.parser.study.copy()
         self.m = {
           "name": self.study["Study Name"],
@@ -462,11 +459,11 @@ class OMEROFormatter(object):
     def generate_description(self, component):
         """Generate the description of the study/experiment/screen"""
         publication_title = ""
-        if component["Study Publication Title"]:
+        if component.get("Study Publication Title", None):
             # Only display the first publication
             publication_title = (
-                "Publication Title\n%(Study Publication Title)s" %
-                component).split('\t')[0] + "\n\n"
+                "Publication Title\n%s" %
+                component["Study Publication Title"][0]) + "\n\n"
         if "Type" in component:
             key = "%s Description" % component["Type"]
         else:
@@ -483,44 +480,45 @@ class OMEROFormatter(object):
 
     def get_publications(self):
 
-        titles = self.study['Study Publication Title'].split('\t')
-        authors = self.study['Study Author List'].split('\t')
-        assert len(titles) == len(authors), (
-            "Mismatching publication titles and authors")
-        if titles == [''] and authors == ['']:
+        publications = []
+        titles = self.study['Study Publication Title']
+        authorlists = self.study['Study Author List']
+        pubmeds = self.study.get('Study PubMed ID', [])
+        pmcs = self.study.get('Study PMC ID', [])
+        print(pmcs)
+        dois = self.study.get('Study DOI', [])
+        if titles == [''] and authorlists == ['']:
             return []
 
-        publications = [{"Title": title, "Author List": author}
-                        for title, author in zip(titles, authors)]
-
-        def parse_ids(key, pattern):
-            if key not in self.study:
-                return
-            split_ids = self.study[key].split('\t')
-            key2 = key.strip("Study ")
-            for i in range(len(split_ids)):
-                if not split_ids[i]:
-                    continue
-                m = pattern.match(split_ids[i])
-                if not m:
-                    raise Exception("Invalid %s: %s" % (key2, split_ids[i]))
-                publications[i][key2] = m.group("id")
-
-        parse_ids("Study PubMed ID", re.compile(r"(?P<id>\d+)"))
-        parse_ids("Study PMC ID", re.compile(r"(?P<id>PMC\d+)"))
-        parse_ids("Study DOI", DOI_PATTERN)
-
+        for it in itertools.zip_longest(titles, authorlists, pubmeds, pmcs, dois):
+            title, authorlist, pubmed, pmc, doi = it
+            publication = {"Title": title, "Author List": authorlist}
+            if pubmed:
+                publication["PubMed ID"] = pubmed
+            if pmc:
+                publication["PMC ID"] = pmc
+            if doi:
+                publication["DOI"] = validate_doi(doi)
+            publications.append(publication)
         return publications
 
     def generate_annotation(self, component):
         """Generate the map annotation of the study/experiment/screen"""
 
         def add_key_values(d, pairs):
-            for key, formatter in pairs:
+            for name, key in pairs:
+                if key in component:
+                    for value in component[key]:
+                        s.append({name: value})
+                else:
+                    self.log.debug("Missing key %s" % key)
+
+
+        def format_key_values(d, pairs):
+            for name, formatter in pairs:
                 try:
-                    value = formatter % d
-                    for v in value.split('\t'):
-                        s.append({'%s' % key: v})
+                    v = formatter % d
+                    s.append({'%s' % name: v})
                 except KeyError as e:
                     self.log.debug("Missing %s" % str(e))
 
@@ -531,7 +529,8 @@ class OMEROFormatter(object):
             add_key_values(component, self.SCREEN_SAMPLE_PAIRS)
 
         # Only add Study title if not redundant with Publication Title
-        publication_titles = [x['Title'] for x in self.publications]
+        publications = self.get_publications()
+        publication_titles = [x['Title'] for x in publications]
         study_title = component.get("Study Title", None)
         if study_title is not None and study_title not in publication_titles:
             add_key_values(component, [('Study Title', "%(Study Title)s")])
@@ -541,11 +540,13 @@ class OMEROFormatter(object):
         elif component.get("Type", None) == "Screen":
             add_key_values(component, self.SCREEN_TECHNOLOGY_PAIRS)
 
-        for publication in self.publications:
-            add_key_values(publication, self.PUBLICATION_PAIRS)
-        add_key_values(component, self.BOTTOM_PAIRS)
+        for publication in publications:
+            format_key_values(publication, self.PUBLICATION_PAIRS)
+        format_key_values(component, self.DATA_PAIRS)
+        add_key_values(component, [('External URL', "Study External URL")])
+        format_key_values(component, self.ACCESSION_PAIRS)
         for annotation in component.get("Annotations", []):
-            add_key_values(annotation, self.ANNOTATION_PAIRS)
+            format_key_values(annotation, self.ANNOTATION_PAIRS)
         return s
 
     def check_object(self, obj, d, update=False):
