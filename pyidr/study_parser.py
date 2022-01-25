@@ -701,9 +701,10 @@ def main(argv):
                         help="Fail if unknown keys are detected")
     parser.add_argument("--inspect", action="store_true",
                         help="Inspect the internals of the study directory")
-    parser.add_argument("--report",
-                        help="Create a report of the generated objects",
-                        nargs="?", type=str, const='-')
+    parser.add_argument("--report", action="store_true",
+                        help="Create a JSON report of the generated objects")
+    parser.add_argument("--report-directory", type=str,
+                        help="Directory to store the JSON reports")
     parser.add_argument(
         '--verbose', '-v', action='count', default=0,
         help='Increase the command verbosity')
@@ -741,8 +742,15 @@ def main(argv):
 
         if args.report:
             d = JSONFormatter(p, inspect=args.inspect)
-            with open("%s.json" % p.study["Study Accession"], mode="w") as f:
-                f.write(str(d))
+            if args.report_directory:
+                if not os.path.exists(args.report_directory):
+                    os.mkdir(args.report_directory)
+                filepath = "%s/%s.json" % (
+                    args.report_directory, p.study["Study Accession"])
+                with open(filepath, mode="w") as f:
+                    f.write(str(d))
+            else:
+                print(str(d))
 
         if args.check or args.set:
             d = OMEROFormatter(p)
