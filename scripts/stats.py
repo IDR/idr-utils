@@ -23,6 +23,7 @@ from omero.cli import Parser
 from omero.cmd import DiskUsage2
 from omero.rtypes import unwrap
 from omero.sys import ParametersI
+from omero.gateway import BlitzGateway
 
 from yaml import safe_load
 
@@ -246,6 +247,19 @@ def fs_usage(client, objecttype, objectid):
     return sizebytes, nfiles
 
 
+def get_study_key_value_pairs(client, container, id, ns="idr.openmicroscopy.org/study/info"):
+
+    conn = BlitzGateway(client_obj=client)
+    logging.debug("get_study_key_value_pairs: %s %s"  % (container, id))
+    key_values = {}
+    for link in conn.getAnnotationLinks(container, [id], ns=ns):
+        ann = link.getAnnotation()
+        logging.debug("map annotation ID: %s", ann.id)
+        for key_value in ann.getValue():
+            key_values[key_value[0]] = key_value[1]
+    return key_values
+
+
 def stat_top_level(client, study_list, *, release, fsusage, append_totals):
     # Calculate stats for the studies.tsv file.
     # client: OMERO client
@@ -262,6 +276,7 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
         "Container",
         "Introduced",
         "ID",  # "Internal ID"
+        "Sample Type",   # cell or tissue
         "Set",  # Number of plates or datasets
         "Wells",
         "Experiments",
@@ -309,6 +324,7 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
                     container2,
                     release,
                     "MISSING",
+                    "",
                     0,
                     0,
                     experiments,
@@ -334,6 +350,7 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
                         bytes,
                         avg_image_dim
                     ) = x
+                    kv_pairs = get_study_key_value_pairs(client, parenttype, plate_or_dataset_id)
                     if not planes:
                         planes = 0
                     if not bytes:
@@ -358,6 +375,7 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
                         container2,
                         release,
                         plate_or_dataset_id,
+                        kv_pairs.get("Sample Type", ""),
                         plate_or_datasets,
                         wells,
                         experiments,
