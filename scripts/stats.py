@@ -276,7 +276,6 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
         "Container",
         "Introduced",
         "ID",  # "Internal ID"
-        "Sample Type",   # cell or tissue
         "Set",  # Number of plates or datasets
         "Wells",
         "Experiments",
@@ -294,6 +293,7 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
         "# of Files",
         "avg. size (MB)",
         "Avg. Image Dim (XYZCT)",
+        "Sample Type",   # cell or tissue
     ))
 
     # Placeholders:
@@ -324,7 +324,6 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
                     container2,
                     release,
                     "MISSING",
-                    "",
                     0,
                     0,
                     experiments,
@@ -336,6 +335,7 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
                     0,
                     None,
                     None,
+                    "",
                     "",
                 )
             else:
@@ -375,7 +375,6 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
                         container2,
                         release,
                         plate_or_dataset_id,
-                        kv_pairs.get("Sample Type", ""),
                         plate_or_datasets,
                         wells,
                         experiments,
@@ -388,6 +387,7 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
                         fs_num,
                         fs_avg_size,
                         avg_image_dim,
+                        kv_pairs.get("Sample Type", ""),
                     )
 
     if append_totals:
