@@ -247,10 +247,11 @@ def fs_usage(client, objecttype, objectid):
     return sizebytes, nfiles
 
 
-def get_study_key_value_pairs(client, container, id, ns="idr.openmicroscopy.org/study/info"):
+def get_study_key_value_pairs(
+        client, container, id, ns="idr.openmicroscopy.org/study/info"):
 
     conn = BlitzGateway(client_obj=client)
-    logging.debug("get_study_key_value_pairs: %s %s"  % (container, id))
+    logging.debug("get_study_key_value_pairs: %s %s" % (container, id))
     key_values = {}
     for link in conn.getAnnotationLinks(container, [id], ns=ns):
         ann = link.getAnnotation()
@@ -350,7 +351,8 @@ def stat_top_level(client, study_list, *, release, fsusage, append_totals):
                         bytes,
                         avg_image_dim
                     ) = x
-                    kv_pairs = get_study_key_value_pairs(client, parenttype, plate_or_dataset_id)
+                    kv_pairs = get_study_key_value_pairs(
+                        client, parenttype, plate_or_dataset_id)
                     if not planes:
                         planes = 0
                     if not bytes:
