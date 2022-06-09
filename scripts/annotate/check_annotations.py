@@ -1,5 +1,6 @@
 from omero.gateway import BlitzGateway
 from omero.model import MapAnnotationI
+from omero.cli import cli_login
 import argparse
 import csv
 import logging
@@ -142,88 +143,102 @@ if args.names_from_csv:
                 csv_keys.pop(key)
 
 else:
-    conn = BlitzGateway(os.environ.get('OMERO_USER', 'public'),
-                        os.environ.get('OMERO_PASSWORD', 'public'),
-                        host=host, port=port)
-    conn.connect()
 
-    # Keeps track of all Dataset/Image name resp. Plate/Well pos combinations
-    # in the Project/Screen.
-    images = set()
+    def names_from_idr(conn, df):
+        # Keeps track of all Dataset/Image name resp. Plate/Well pos combinations
+        # in the Project/Screen.
+        images = set()
 
-    # csv rows to export
-    csv_rows = []
+        # csv rows to export
+        csv_rows = []
 
-    if projectId:
-        project = conn.getObject("Project", projectId)
-        if not project:
-            logging.critical("There's no Project with this id.")
-            sys.exit(1)
-        for ds in sorted(project.listChildren(), key=lambda x: x.getName()):
-            for img in sorted(ds.listChildren(), key=lambda x: x.getName()):
-                key = "{},{}".format(ds.getName(), img.getName())
-                if args.names_to_csv:
-                    csv_rows.append([ds.getName(), img.getName()])
-                elif csv_keys:
-                    if key not in csv_keys:
-                        df = df.append({
-                            "Dataset Name": ds.getName(),
-                            "Image Name": img.getName(),
-                            "Errors": "Missing annotation"},
-                            ignore_index=True)
-                        flag_error(ds.getName(), img.getName(),
-                                "Missing annotation in %s" % args.file)
-                    else:
-                        csv_keys.pop(key)
-                else:
-                    if not check_annotations(img.listAnnotations()):
-                        flag_error(ds.getName(), img.getName(),
-                                "Missing annotation")
-                if key in images:
-                    flag_error(ds.getName(), img.getName(),
-                            "Non-unique Dataset/Image")
-                else:
-                    images.add(key)
-    elif screenId:
-        screen = conn.getObject("Screen", screenId)
-        if not screen:
-            logging.critical("There's no Screen with this id.")
-            sys.exit(1)
-        for pl in sorted(screen.listChildren(), key=lambda x: x.getName()):
-            for well in sorted(pl.listChildren(), key=lambda x: x.getWellPos()):
-                if well.getWellSample():
-                    key = "{},{}".format(pl.getName(), well.getWellPos())
+        if projectId:
+            project = conn.getObject("Project", projectId)
+            if not project:
+                logging.critical("There's no Project with this id.")
+                sys.exit(1)
+            for ds in sorted(project.listChildren(), key=lambda x: x.getName()):
+                for img in sorted(ds.listChildren(), key=lambda x: x.getName()):
+                    key = "{},{}".format(ds.getName(), img.getName())
                     if args.names_to_csv:
-                        csv_rows.append([pl.getName(), well.getWellPos()])
+                        csv_rows.append([ds.getName(), img.getName()])
                     elif csv_keys:
                         if key not in csv_keys:
                             df = df.append({
-                                "Plate": pl.getName(),
-                                "Well": well.getWellPos(),
+                                "Dataset Name": ds.getName(),
+                                "Image Name": img.getName(),
                                 "Errors": "Missing annotation"},
                                 ignore_index=True)
-                            flag_error(pl.getName(), well.getWellPos(),
-                                    "Missing annotation in csv file")
+                            flag_error(ds.getName(), img.getName(),
+                                    "Missing annotation in %s" % args.file)
                         else:
                             csv_keys.pop(key)
                     else:
-                        if not check_annotations(well.listAnnotations()):
-                            flag_error(pl.getName(), well.getWellPos(),
+                        if not check_annotations(img.listAnnotations()):
+                            flag_error(ds.getName(), img.getName(),
                                     "Missing annotation")
                     if key in images:
-                        flag_error(pl.getName(), well.getWellPos(),
-                                "Non-unique Plate/Well")
+                        flag_error(ds.getName(), img.getName(),
+                                "Non-unique Dataset/Image")
                     else:
                         images.add(key)
+        elif screenId:
+            screen = conn.getObject("Screen", screenId)
+            if not screen:
+                logging.critical("There's no Screen with this id.")
+                sys.exit(1)
+            for pl in sorted(screen.listChildren(), key=lambda x: x.getName()):
+                for well in sorted(pl.listChildren(), key=lambda x: x.getWellPos()):
+                    if well.getWellSample():
+                        key = "{},{}".format(pl.getName(), well.getWellPos())
+                        if args.names_to_csv:
+                            csv_rows.append([pl.getName(), well.getWellPos()])
+                        elif csv_keys:
+                            if key not in csv_keys:
+                                df = df.append({
+                                    "Plate": pl.getName(),
+                                    "Well": well.getWellPos(),
+                                    "Errors": "Missing annotation"},
+                                    ignore_index=True)
+                                flag_error(pl.getName(), well.getWellPos(),
+                                        "Missing annotation in csv file")
+                            else:
+                                csv_keys.pop(key)
+                        else:
+                            if not check_annotations(well.listAnnotations()):
+                                flag_error(pl.getName(), well.getWellPos(),
+                                        "Missing annotation")
+                        if key in images:
+                            flag_error(pl.getName(), well.getWellPos(),
+                                    "Non-unique Plate/Well")
+                        else:
+                            images.add(key)
+        if csv_rows:
+            # write csv
+            print("Writing image_list.csv")
+            with open('image_list.csv', 'w') as csv_out:
+                writer = csv.writer(csv_out, delimiter=',')
+                for row in csv_rows:
+                    writer.writerow(row)
 
-    conn.close()
+    # Login using environment variables
+    conn = BlitzGateway(os.environ.get('OMERO_USER', 'public'),
+                        os.environ.get('OMERO_PASSWORD', 'public'),
+                        host=host, port=port)
+    connected = False
+    print("df", df)
+    try:
+        connected = conn.connect()
+        names_from_idr(conn, df)
+        conn.close()
+    except:
+        pass
+    # alternative login
+    if not connected:
+        with cli_login() as cli:
+            conn = BlitzGateway(client_obj=cli._client)
+            names_from_idr(conn, df)
 
-    if csv_rows:
-        # write csv
-        with open('image_list.csv', 'w') as csv_out:
-            writer = csv.writer(csv_out, delimiter=',')
-            for row in csv_rows:
-                writer.writerow(row)
 
 if csv_keys:
     logging.warning("There are additional entries in %s which don't"
