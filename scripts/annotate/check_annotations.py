@@ -25,7 +25,7 @@ are not necessary but are taken into account if set.
 
 parser = argparse.ArgumentParser(description=DESC)
 parser.add_argument("target", help="Project:123 or Screen:123")
-parser.add_argument("file", nargs="?", help="The annotation.csv file")
+parser.add_argument("file", nargs="?", help="The annotation.csv file or assay.tsv file")
 parser.add_argument(
     "--names-to-csv", action="store_true",
     help="write Dataset,Image or Plate,Well to csv for validation offline")
@@ -79,10 +79,11 @@ def report_problems():
     from operator import itemgetter
     logging.error("Problem(s) detected:")
     for reason in problems:
-        logging.error(reason)
         elements = sorted(problems[reason], key=itemgetter(0, 1))
+        logging.error(reason + f" (Found {len(elements)} times)")
         for element in elements:
             logging.info("{},{}".format(element[0], element[1]))
+        logging.info("---")
 
 
 def check_annotations(anns):
@@ -103,6 +104,7 @@ def check_annotations(anns):
 # entries gathered from the csv file.
 csv_keys = {}
 
+df = None
 if args.file:
     sep = ","
     img_col = "Image Name"
@@ -143,7 +145,6 @@ if args.names_from_csv:
                 csv_keys.pop(key)
 
 else:
-
     def names_from_idr(conn, df):
         # Keeps track of all Dataset/Image name resp. Plate/Well pos combinations
         # in the Project/Screen.
@@ -160,7 +161,7 @@ else:
             for ds in sorted(project.listChildren(), key=lambda x: x.getName()):
                 for img in sorted(ds.listChildren(), key=lambda x: x.getName()):
                     key = "{},{}".format(ds.getName(), img.getName())
-                    if args.names_to_csv:
+                    if args.names_to_csv and key not in images:
                         csv_rows.append([ds.getName(), img.getName()])
                     elif csv_keys:
                         if key not in csv_keys:
@@ -221,19 +222,20 @@ else:
                 for row in csv_rows:
                     writer.writerow(row)
 
-    # Login using environment variables
+    # Try login using environment variables...
     conn = BlitzGateway(os.environ.get('OMERO_USER', 'public'),
                         os.environ.get('OMERO_PASSWORD', 'public'),
                         host=host, port=port)
     connected = False
-    print("df", df)
     try:
         connected = conn.connect()
         names_from_idr(conn, df)
-        conn.close()
     except:
         pass
-    # alternative login
+    finally:
+        if connected:
+            conn.close()
+    # If that fails, allow cli login...
     if not connected:
         with cli_login() as cli:
             conn = BlitzGateway(client_obj=cli._client)
@@ -241,8 +243,8 @@ else:
 
 
 if csv_keys:
-    logging.warning("There are additional entries in %s which don't"
-                    " match any images:" % args.file)
+    logging.warning(f"There are additional entries in {args.file} which don't"
+                    f" match any images: (Found {len(csv_keys)} times)")
     for key in sorted(csv_keys):
         df.loc[csv_keys[key], "Errors"] = "No image"
         logging.info("{},No image".format(key))
