@@ -19,6 +19,7 @@ def create_release_stats(studies_file, release=None, date=None, size=None):
         "Size (TB)",
         "Files (Million)",
         "DB Size (GB)",
+        "Studies",
     ))
 
     suffixes = studies['Introduced'].apply(lambda x: int(x[4:]))
@@ -43,7 +44,8 @@ def create_release_stats(studies_file, release=None, date=None, size=None):
         int(studies[index]['Planes'].sum()),
         studies[index]['Size (TB)'].sum(),
         studies[index]['# of Files'].sum() / 10 ** 6,
-        size)
+        size,
+        studies[index]['Study'].nunique())
     return(df)
 
 
