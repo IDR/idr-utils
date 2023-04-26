@@ -10,6 +10,7 @@ from omero.gateway import BlitzGateway
 
 def create_symlinks(conn, fileset, args):
 
+    preview_image(fileset)
     template_path = os.path.join(args.repo, fileset.templatePrefix)
 
     if args.report:
@@ -40,6 +41,11 @@ def create_symlinks(conn, fileset, args):
             # replace with symlink
             target_is_directory = os.path.isdir(symlink_target)
             os.symlink(symlink_target, symlink_source, target_is_directory)
+
+
+def preview_image(fileset):
+    first_image = list(fileset.copyImages())[0]
+    first_image.renderJpeg()
 
 
 def get_object(conn, obj_string):
