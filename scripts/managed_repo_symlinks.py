@@ -10,13 +10,14 @@ from omero.gateway import BlitzGateway
 
 def create_symlinks(conn, fileset_id, args):
 
-    preview_image(conn, fileset_id, args)
     fileset = conn.getQueryService().get("Fileset", fileset_id, conn.SERVICE_OPTS)
     template_path = os.path.join(args.repo, fileset.templatePrefix.val)
 
     if args.report:
         print("\nFileset:", fileset.id.val, template_path)
     # /data/OMERO/ManagedRepository/demo_2/Blitz-0-Ice.ThreadPool.Server-8/2023-04/07/13-29-24.048/
+
+    preview_image(conn, fileset_id, args)
 
     # find files/dirs in Fileset template_path that are also in the symlink dir...
     fs_contents = os.listdir(template_path)
