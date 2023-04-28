@@ -8,13 +8,14 @@ from omero.cli import cli_login
 from omero.gateway import BlitzGateway
 
 
-def create_symlinks(conn, fileset, args):
+def create_symlinks(conn, fileset_id, args):
 
-    preview_image(fileset)
-    template_path = os.path.join(args.repo, fileset.templatePrefix)
+    preview_image(conn, fileset_id, args)
+    fileset = conn.getQueryService().get("Fileset", fileset_id, conn.SERVICE_OPTS)
+    template_path = os.path.join(args.repo, fileset.templatePrefix.val)
 
     if args.report:
-        print("\nFileset:", fileset.id, template_path)
+        print("\nFileset:", fileset.id.val, template_path)
     # /data/OMERO/ManagedRepository/demo_2/Blitz-0-Ice.ThreadPool.Server-8/2023-04/07/13-29-24.048/
 
     # find files/dirs in Fileset template_path that are also in the symlink dir...
@@ -43,9 +44,18 @@ def create_symlinks(conn, fileset, args):
             os.symlink(symlink_target, symlink_source, target_is_directory)
 
 
-def preview_image(fileset):
-    first_image = list(fileset.copyImages())[0]
-    first_image.renderJpeg()
+def preview_image(conn, fileset_id, args):
+
+    params = omero.sys.ParametersI()
+    params.addId(fileset_id)
+    params.page(0, 1)
+    query = "select img from Image img where img.fileset.id=:id"
+    first_image = conn.getQueryService().findAllByQuery(query, params, conn.SERVICE_OPTS)[0]
+
+    if args.report:
+        print("Render Image", first_image.id.val)
+    image = conn.getObject("Image", first_image.id.val)
+    image.renderJpeg()
 
 
 def get_object(conn, obj_string):
@@ -58,18 +68,21 @@ def get_object(conn, obj_string):
             return obj
  
 
-def get_fileset(conn, obj_string):
+def get_fileset_id(conn, obj_string):
     """obj_string is Image:123 or Fileset:123 or Plate:123"""
 
-    obj = get_object(conn, obj_string)
+    # We never do conn.getObject("Fileset") as it loads
+    # all original files and images - can be too slow
     if obj_string.startswith("Fileset:"):
-        return obj
+        return int(obj_string.replace("Fileset:", ""))
+
+    obj = get_object(conn, obj_string)
     if obj_string.startswith("Image:"):
-        return obj.getFileset()
+        return obj.fileset.id.val
     if obj_string.startswith("Plate:"):
         well = list(obj.listChildren())[0]
         image = list(well.listChildren())[0].getImage()
-        return image.getFileset()
+        return image.fileset.id.val
 
 
 def main(argv):
@@ -101,8 +114,8 @@ def main(argv):
             obj_strings = [f"Image:{image.id}" for image in dataset.listChildren()]
 
         for object_str in obj_strings:
-            fileset = get_fileset(conn, object_str)
-            create_symlinks(conn, fileset, args)
+            fileset_id = get_fileset_id(conn, object_str)
+            create_symlinks(conn, fileset_id, args)
 
 
 if __name__ == '__main__':
