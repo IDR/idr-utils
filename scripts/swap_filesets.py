@@ -66,9 +66,10 @@ def get_fileset(conn, obj_string):
     if obj_string.startswith("Image:"):
         return obj.getFileset()
     if obj_string.startswith("Plate:"):
-        well = list(obj.listChildren())[0]
-        image = list(well.listChildren())[0].getImage()
-        return image.getFileset()
+        for well in obj.listChildren():
+            for ws in well.listChildren():
+                image = ws.getImage()
+                return image.getFileset()
 
 
 def main(argv):
