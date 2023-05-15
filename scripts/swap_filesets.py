@@ -8,7 +8,7 @@ from omero.gateway import BlitzGateway
 # Swap Images between 2 Filesets. Input is Fileset, Image, Plate or Screen
 # Usage: $ python swap_filesets.py Image:1 Image:2 --report --dry-run
 
-def swap_fileset(conn, old_fileset, new_fileset, report = False, dryrun = False):
+def swap_fileset(conn, old_fileset, new_fileset, sql_filename, report = False, dryrun = False):
 
     if report:
         print("Swapping images between Fileset %s and Fileset %s" %
@@ -44,7 +44,12 @@ def swap_fileset(conn, old_fileset, new_fileset, report = False, dryrun = False)
 
     # Print the HQL updates we need to update each Pixels to new Fileset file
     # Set it to dataset.zarr/OME/METADATA.ome.xml since this works for Plates (Images???)
-    print(f"UPDATE pixels SET name = 'METADATA.ome.xml', path = '{file_path}/OME' where image in (select id from Image where fileset = {new_fileset.id});")
+    cmd = f"UPDATE pixels SET name = 'METADATA.ome.xml', path = '{file_path}/OME' where image in (select id from Image where fileset = {new_fileset.id});"
+    with open(sql_filename, 'a') as f:
+        f.write(cmd)
+        f.write("\n")
+    if report:
+        print(cmd)
 
 
 def get_object(conn, obj_string):
@@ -90,6 +95,9 @@ def main(argv):
     old_object = args.old_object
     new_object = args.new_object
 
+    sql_filename = f"fileset_swap_{old_object}.sql"
+    print("SQL writing to " + sql_filename)
+
     with cli_login() as cli:
         conn = BlitzGateway(client_obj=cli._client)
         if ":" not in old_object or ":" not in new_object:
@@ -110,13 +118,14 @@ def main(argv):
                     print(f"No Plate named {name} in {old_object}")
                 old_fileset = get_fileset(conn, f"Plate:{old_plates_by_name[name].id}")
                 new_fileset = get_fileset(conn, f"Plate:{new_plate.id}")
-                swap_fileset(conn, old_fileset, new_fileset, args.report, args.dry_run)
+                swap_fileset(conn, old_fileset, new_fileset, sql_filename, args.report, args.dry_run)
 
         else:
             old_fileset = get_fileset(conn, old_object)
             new_fileset = get_fileset(conn, new_object)
-            swap_fileset(conn, old_fileset, new_fileset, args.report, args.dry_run)
+            swap_fileset(conn, old_fileset, new_fileset, sql_filename, args.report, args.dry_run)
 
+    print("SQL output added to " + sql_filename)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
