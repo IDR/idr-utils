@@ -25,7 +25,7 @@ def swap_fileset(conn, old_fileset, new_fileset, sql_filename, report = False, d
     # link all OLD Images to the NEW Fileset
     for image in old_images:
         if report:
-            print("Moving Image: %s to Fileset: %s" % (img.id, new_fileset.id))
+            print("Moving Image: %s to Fileset: %s" % (image.id, new_fileset.id))
         if dryrun:
             continue
         img = image._obj
@@ -35,7 +35,7 @@ def swap_fileset(conn, old_fileset, new_fileset, sql_filename, report = False, d
     # unlink all NEW Images (to be deleted)
     for image in new_images:
         if report:
-            print("Unlinking Image: %s" % (img.id))
+            print("Unlinking Image: %s" % (image.id))
         if dryrun:
             continue
         img = image._obj
