@@ -32,14 +32,14 @@ def swap_fileset(conn, old_fileset, new_fileset, report = False, dryrun = False)
         img.fileset = omero.model.FilesetI(new_fileset.id, False)
         conn.getUpdateService().saveObject(img, conn.SERVICE_OPTS)
 
-    # link all NEW Images (to be deleted) to the OLD Fileset
+    # unlink all NEW Images (to be deleted)
     for image in new_images:
         if report:
-            print("Moving Image: %s to Fileset: %s" % (img.id, old_fileset.id))
+            print("Unlinking Image: %s" % (img.id))
         if dryrun:
             continue
         img = image._obj
-        img.fileset = omero.model.FilesetI(old_fileset.id, False)
+        img.fileset = None
         conn.getUpdateService().saveObject(img, conn.SERVICE_OPTS)
 
     # Print the HQL updates we need to update each Pixels to new Fileset file
@@ -74,8 +74,10 @@ def get_fileset(conn, obj_string):
 
 def main(argv):
     """
-    For all the Images in the old Screen, Plate, Image or Fileset, we swap the Fileset with the equivalent
-    Images in the new Screen, Plate, Image or Fileset (both old and new Images are updated).
+    Swaps Fileset from 'Old Object' to 'New Object'.
+    For all the Images in the 'Old Object' (Screen, Plate, Image or Fileset), we swap the
+    Fileset to use the Fileset in the 'New Object'. Images in the `New Object` are left
+    unlinked to any Fileset, and can then be deleted.
     Also prints an sql command(s) to update the pixels in the NEW Images only.
     For Screens containing multiple Plates (Filesets), we match the Plates by Name
     """
