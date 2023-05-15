@@ -89,13 +89,14 @@ def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('old_object', help='Object:ID where Object is Screen, Plate, Image, Fileset')
     parser.add_argument('new_object', help='Object:ID where Object is Screen, Plate, Image, Fileset')
+    parser.add_argument('sql_output', help='File path to output sql commands')
     parser.add_argument("--report", action="store_true", help="Print logs")
     parser.add_argument("--dry-run", action="store_true", help="Don't save any changes")
     args = parser.parse_args(argv)
     old_object = args.old_object
     new_object = args.new_object
 
-    sql_filename = f"fileset_swap_{old_object}.sql"
+    sql_filename = args.sql_output
     print("SQL writing to " + sql_filename)
 
     with cli_login() as cli:
