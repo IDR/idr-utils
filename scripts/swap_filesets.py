@@ -53,7 +53,7 @@ def swap_fileset(conn, old_fileset, new_fileset, sql_filename, report = False, d
 
 
 def get_object(conn, obj_string):
-    for dtype in ["Screen", "Plate", "Image", "Fileset"]:
+    for dtype in ["Screen", "Plate", "Dataset", "Image", "Fileset"]:
         if obj_string.startswith(dtype):
             obj_id = int(obj_string.replace(dtype + ":", ""))
             obj = conn.getObject(dtype, obj_id)
@@ -80,15 +80,15 @@ def get_fileset(conn, obj_string):
 def main(argv):
     """
     Swaps Fileset from 'Old Object' to 'New Object'.
-    For all the Images in the 'Old Object' (Screen, Plate, Image or Fileset), we swap the
+    For all the Images in the 'Old Object' (Screen, Plate, Dataset, Image or Fileset), we swap the
     Fileset to use the Fileset in the 'New Object'. Images in the `New Object` are left
     unlinked to any Fileset, and can then be deleted.
     Also prints an sql command(s) to update the pixels in the NEW Images only.
     For Screens containing multiple Plates (Filesets), we match the Plates by Name
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('old_object', help='Object:ID where Object is Screen, Plate, Image, Fileset')
-    parser.add_argument('new_object', help='Object:ID where Object is Screen, Plate, Image, Fileset')
+    parser.add_argument('old_object', help='Object:ID where Object is Screen, Plate, Dataset, Image, Fileset')
+    parser.add_argument('new_object', help='Object:ID where Object is Screen, Plate, Dataset, Image, Fileset')
     parser.add_argument('sql_output', help='File path to output sql commands')
     parser.add_argument("--report", action="store_true", help="Print logs")
     parser.add_argument("--dry-run", action="store_true", help="Don't save any changes")
@@ -119,6 +119,21 @@ def main(argv):
                     print(f"No Plate named {name} in {old_object}")
                 old_fileset = get_fileset(conn, f"Plate:{old_plates_by_name[name].id}")
                 new_fileset = get_fileset(conn, f"Plate:{new_plate.id}")
+                swap_fileset(conn, old_fileset, new_fileset, sql_filename, args.report, args.dry_run)
+
+        if "Dataset" in old_object:
+            old_dataset = get_object(conn, old_object)
+            new_dataset = get_object(conn, new_object)
+            old_images_by_name = {}
+            for image in old_dataset.listChildren():
+                old_images_by_name[image.getName()] = image
+
+            for new_image in new_dataset.listChildren():
+                name = new_image.getName()
+                if name not in old_images_by_name:
+                    print(f"No Image named {name} in {old_object}")
+                old_fileset = get_fileset(conn, f"Image:{old_images_by_name[name].id}")
+                new_fileset = get_fileset(conn, f"Image:{new_image.id}")
                 swap_fileset(conn, old_fileset, new_fileset, sql_filename, args.report, args.dry_run)
 
         else:
