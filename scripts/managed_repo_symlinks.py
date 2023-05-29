@@ -1,4 +1,5 @@
 import argparse
+import csv
 import sys
 import os
 import shutil
@@ -19,6 +20,14 @@ def create_symlinks(conn, fileset_id, args):
 
     preview_image(conn, fileset_id, args)
 
+    fileset_dirs = {}
+    # handle fileset_mappings
+    if args.fileset_mappings:
+        with open(args.fileset_mappings, newline='') as csvfile:
+            csvreader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+            for row in csvreader:
+                fileset_dirs[row[0]] = row[1]
+
     # find files/dirs in Fileset template_path that are also in the symlink dir...
     fs_contents = os.listdir(template_path)
     if args.report:
@@ -26,7 +35,8 @@ def create_symlinks(conn, fileset_id, args):
 
     for fs_item in fs_contents:
         # check if item is in target dir
-        symlink_target = os.path.join(args.target, fs_item)
+        target_dir = fileset_dirs.get(fs_item, fs_item)
+        symlink_target = os.path.join(args.target, target_dir)
         if not os.path.exists(symlink_target):
             print("Symlink target not found:", symlink_target)
             continue
@@ -92,10 +102,14 @@ def main(argv):
     templatePrefix dir under ManagedRepository. If these items are also found in
     the target directory, we delete the item from the Managed Repo and replace it with
     a symlink to the equivalent dir (or file) in the target dir.
+    If fileset-mappings csv file is given, we map from fileset name e.g. plate1.zarr to a differently
+    named directory within the `target`, e.g. abc123/abc123.zarr (pattern used by BioStudies).
+    Each row of csv should be e.g. "plate1.zarr, abc123/abc123.zarr"
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('object', help='Object:ID where Object is Screen, Plate, Dataset, Image, Fileset')
     parser.add_argument("target", help="path to dir that contains symlink targets")
+    parser.add_argument("--fileset-mappings", help="Optional path/to/file.csv where each row is: fs_name, symlink_target")
     parser.add_argument("--repo", help="Managed Repo absolute path", default="/data/OMERO/ManagedRepository")
     parser.add_argument("--report", action="store_true", help="Print logs")
     parser.add_argument("--dry-run", action="store_true", help="Don't save any changes")
