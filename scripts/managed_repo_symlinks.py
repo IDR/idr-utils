@@ -24,9 +24,11 @@ def create_symlinks(conn, fileset_id, args):
     # handle fileset_mappings
     if args.fileset_mappings:
         with open(args.fileset_mappings, newline='') as csvfile:
-            csvreader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+            csvreader = csv.reader(csvfile, delimiter=',')
             for row in csvreader:
                 fileset_dirs[row[0]] = row[1]
+    if args.report:
+        print("fileset_dirs", fileset_dirs)
 
     # find files/dirs in Fileset template_path that are also in the symlink dir...
     fs_contents = os.listdir(template_path)
