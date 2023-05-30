@@ -9,7 +9,8 @@ from omero.cli import cli_login
 from omero.gateway import BlitzGateway
 
 
-def create_symlinks(conn, fileset_id, args):
+def create_symlinks(conn, fileset_id, fileset_dirs, args):
+    """ fileset_dirs is dict of 'filset_dir.zarr': 's3_dir_name.zarr' """
 
     fileset = conn.getQueryService().get("Fileset", fileset_id, conn.SERVICE_OPTS)
     template_path = os.path.join(args.repo, fileset.templatePrefix.val)
@@ -19,16 +20,6 @@ def create_symlinks(conn, fileset_id, args):
     # /data/OMERO/ManagedRepository/demo_2/Blitz-0-Ice.ThreadPool.Server-8/2023-04/07/13-29-24.048/
 
     preview_image(conn, fileset_id, args)
-
-    fileset_dirs = {}
-    # handle fileset_mappings
-    if args.fileset_mappings:
-        with open(args.fileset_mappings, newline='') as csvfile:
-            csvreader = csv.reader(csvfile, delimiter=',')
-            for row in csvreader:
-                fileset_dirs[row[0]] = row[1]
-    if args.report:
-        print("fileset_dirs", fileset_dirs)
 
     # find files/dirs in Fileset template_path that are also in the symlink dir...
     fs_contents = os.listdir(template_path)
@@ -118,6 +109,16 @@ def main(argv):
     args = parser.parse_args(argv)
     object_str = args.object
 
+    fileset_dirs = {}
+    # handle fileset_mappings
+    if args.fileset_mappings:
+        with open(args.fileset_mappings, newline='') as csvfile:
+            csvreader = csv.reader(csvfile, delimiter=',')
+            for row in csvreader:
+                fileset_dirs[row[0]] = row[1]
+    if args.report:
+        print("fileset_dirs", fileset_dirs)
+
     with cli_login() as cli:
         conn = BlitzGateway(client_obj=cli._client)
         assert ":" in object_str
@@ -132,7 +133,7 @@ def main(argv):
 
         for object_str in obj_strings:
             fileset_id = get_fileset_id(conn, object_str)
-            create_symlinks(conn, fileset_id, args)
+            create_symlinks(conn, fileset_id, fileset_dirs, args)
 
 
 if __name__ == '__main__':
