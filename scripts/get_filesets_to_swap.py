@@ -34,7 +34,11 @@ study_names = [
 
 def get_zarr_name(obj):
     # for plate or image, zarr will be named the same...
-    return obj.name + ".ome.zarr"
+    name = obj.name
+    if name.endswith(".pattern"):
+        # remove .pattern from image names
+        name = name[:-8]
+    return name + ".ome.zarr"
 
 
 def lookup_filesets(conn, name):
