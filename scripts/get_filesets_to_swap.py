@@ -61,21 +61,20 @@ def lookup_filesets(conn, name):
         for dataset in project.listChildren():
             for image in dataset.listChildren():
                 if image.name.endswith(".tif"):
-                    print("Ignoring image", image.id, image.name)
+                    pass
+                    # print("Ignoring image", image.id, image.name)
                 else:
+                    print(image.id)
+                    if " " in image.name:
+                        print(image.name)
                     filesets.append((image.fileset.id.val, get_zarr_name(image)))
     return filesets
 
 
 def main(argv):
     """
-    We go through all Filesets under the top-level Object, and check for items in the
-    templatePrefix dir under ManagedRepository. If these items are also found in
-    the target directory, we delete the item from the Managed Repo and replace it with
-    a symlink to the equivalent dir (or file) in the target dir.
-    If fileset-mappings csv file is given, we map from fileset name e.g. plate1.zarr to a differently
-    named directory within the `target`, e.g. abc123/abc123.zarr (pattern used by BioStudies).
-    Each row of csv should be e.g. "plate1.zarr, abc123/abc123.zarr"
+    We go through all Filesets under the list of studies above and
+    make a CSV file of "Fileset ID, ZarrName, ZarrPath"
     """
 
     with cli_login() as cli:
@@ -83,7 +82,7 @@ def main(argv):
     
         for (name, dir_name) in study_names:
             filesets = lookup_filesets(conn, name)
-            print("\n", name, filesets)
+            # print("\n", name, filesets)
             with open('idr_filesets.csv', 'a', newline='') as csvfile:
                 fswriter = csv.writer(csvfile)
 
