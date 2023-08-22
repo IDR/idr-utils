@@ -10,7 +10,8 @@ parser.add_argument("namespace", help="The namespace of the annotations, e.g. op
 
 url_names = {"openmicroscopy.org/mapr/gene": "Gene Identifier URL",
              "openmicroscopy.org/mapr/compound": "Compound Name URL",
-             "openmicroscopy.org/mapr/phenotype": "Phenotype Term Accession URL"}
+             "openmicroscopy.org/mapr/phenotype": "Phenotype Term Accession URL",
+             "openmicroscopy.org/mapr/antibody": "Antibody Identifier URL"}
 
 pref_urls = [re.compile(r"^https:\/\/(?!www).+"),\
              re.compile(r"^https:\/\/.+")] # prefer https:// without www over with www
