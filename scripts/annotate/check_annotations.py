@@ -193,7 +193,7 @@ if csv_keys:
                     " match any images:")
     for key in sorted(csv_keys):
         df.loc[csv_keys[key], "Errors"] = "No image"
-        logging.info("{},No image".format(key))
+        logging.warning("{},No image".format(key))
 
 if args.output:
     if args.skip_ok:
