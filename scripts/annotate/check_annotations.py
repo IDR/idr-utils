@@ -75,7 +75,7 @@ def report_problems():
         logging.error(reason)
         elements = sorted(problems[reason], key=itemgetter(0, 1))
         for element in elements:
-            logging.info("{},{}".format(element[0], element[1]))
+            logging.error("{},{}".format(element[0], element[1]))
 
 
 def check_annotations(anns):
