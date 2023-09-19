@@ -34,6 +34,12 @@ def main(argv):
             # idr0051/180712_H2B_22ss_Courtney_p00_c00_reg_preview.klb.ome.zarr.zip
             fileset_name = row[0]
             bia_id = row[1]
+
+            # special handling for idr0013. e.g. idr0013/LT0021_51--ex2006_08_30--sp2006_08_21--tt20--c5.ome.zarr
+            # needs to be shortened to idr0013/LT0021_51--ex2006_08_30 (name in IDR)
+            if fileset_name.startswith("idr0013"):
+                fileset_name = fileset_name.split("--")[0] + ".ome.zarr"
+
             if fileset_name in fsids_by_fsname:
                 fsid = fsids_by_fsname[fileset_name]
                 bia_by_fsid.append([fileset_name, bia_id, fsid])
