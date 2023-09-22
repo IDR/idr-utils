@@ -48,7 +48,8 @@ def main(argv):
                 # keep row unchanged
                 bia_by_fsid.append([fileset_name, bia_id])
 
-    print(bia_by_fsid)
+    # print(bia_by_fsid)
+    print("%s filesets matched" % len(bia_by_fsid))
 
     with open(f"{args.idr_id}.csv", 'w', newline='') as csvfile:
         csvwriter = csv.writer(csvfile)
