@@ -1,4 +1,3 @@
-Cancelled
 UPDATE pixels SET name = 'METADATA.ome.xml', path = 'demo_2/2016-06/12/20-22-51.701_mkngff/91d039ce-b037-4b5a-a975-8c0ecf883c6b.zarr/OME' where image in (select id from Image where fileset = 21176);
 
 begin;
