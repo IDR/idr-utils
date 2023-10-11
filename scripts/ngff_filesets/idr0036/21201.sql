@@ -1,3 +1,4 @@
+UPDATE pixels SET name = '.zattrs', path = 'demo_2/2016-06/15/09-19-19.743_mkngff/8cfc6903-910b-451c-8878-9a4c4f3e82bb.zarr' where image in (select id from Image where fileset = 21201);
 
 begin;
     select mkngff_fileset(
