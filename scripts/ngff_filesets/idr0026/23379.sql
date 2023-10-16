@@ -7,15 +7,15 @@ begin;
       'cdf35825-def1-4580-8d0b-9c349b8f78d6',
       'demo_2/2017-04/13/03-29-15.357_mkngff/',
       array[
-          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/', '.zattrs', 'application/octet-stream'],
-          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/', '.zgroup', 'application/octet-stream'],
-          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/0/', '.zattrs', 'application/octet-stream'],
-          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/0/', '.zgroup', 'application/octet-stream'],
-          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/0/0/', '.zarray', 'application/octet-stream'],
-          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/0/1/', '.zarray', 'application/octet-stream'],
-          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/OME/', '.zattrs', 'application/octet-stream'],
-          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/OME/', '.zgroup', 'application/octet-stream'],
-          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/OME/', 'METADATA.ome.xml', 'application/octet-stream']
+          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/', '.zattrs', 'application/octet-stream', 'https://uk1s3.embassy.ebi.ac.uk/bia-integrator-data/S-BIAD860/7ee9776a-95ec-4861-950e-c6f0884ef27b/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/.zattrs'],
+          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/', '.zgroup', 'application/octet-stream', 'https://uk1s3.embassy.ebi.ac.uk/bia-integrator-data/S-BIAD860/7ee9776a-95ec-4861-950e-c6f0884ef27b/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/.zgroup'],
+          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/0/', '.zattrs', 'application/octet-stream', 'https://uk1s3.embassy.ebi.ac.uk/bia-integrator-data/S-BIAD860/7ee9776a-95ec-4861-950e-c6f0884ef27b/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/0/.zattrs'],
+          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/0/', '.zgroup', 'application/octet-stream', 'https://uk1s3.embassy.ebi.ac.uk/bia-integrator-data/S-BIAD860/7ee9776a-95ec-4861-950e-c6f0884ef27b/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/0/.zgroup'],
+          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/0/0/', '.zarray', 'application/octet-stream', 'https://uk1s3.embassy.ebi.ac.uk/bia-integrator-data/S-BIAD860/7ee9776a-95ec-4861-950e-c6f0884ef27b/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/0/0/.zarray'],
+          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/0/1/', '.zarray', 'application/octet-stream', 'https://uk1s3.embassy.ebi.ac.uk/bia-integrator-data/S-BIAD860/7ee9776a-95ec-4861-950e-c6f0884ef27b/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/0/1/.zarray'],
+          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/OME/', '.zattrs', 'application/octet-stream', 'https://uk1s3.embassy.ebi.ac.uk/bia-integrator-data/S-BIAD860/7ee9776a-95ec-4861-950e-c6f0884ef27b/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/OME/.zattrs'],
+          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/OME/', '.zgroup', 'application/octet-stream', 'https://uk1s3.embassy.ebi.ac.uk/bia-integrator-data/S-BIAD860/7ee9776a-95ec-4861-950e-c6f0884ef27b/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/OME/.zgroup'],
+          ['demo_2/2017-04/13/03-29-15.357_mkngff/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/OME/', 'METADATA.ome.xml', 'application/octet-stream', 'https://uk1s3.embassy.ebi.ac.uk/bia-integrator-data/S-BIAD860/7ee9776a-95ec-4861-950e-c6f0884ef27b/7ee9776a-95ec-4861-950e-c6f0884ef27b.zarr/OME/METADATA.ome.xml']
       ]::text[][]
     );
 commit;
