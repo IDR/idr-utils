@@ -7,11 +7,11 @@ begin;
       'cdf35825-def1-4580-8d0b-9c349b8f78d6',
       'demo_2/2016-06/10/13-37-45.953_mkngff/',
       array[
-          ['demo_2/2016-06/10/13-37-45.953_mkngff/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350.zarr/', '.zattrs', 'application/octet-stream'],
-          ['demo_2/2016-06/10/13-37-45.953_mkngff/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350.zarr/', '.zgroup', 'application/octet-stream'],
-          ['demo_2/2016-06/10/13-37-45.953_mkngff/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350.zarr/OME/', '.zattrs', 'application/octet-stream'],
-          ['demo_2/2016-06/10/13-37-45.953_mkngff/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350.zarr/OME/', '.zgroup', 'application/octet-stream'],
-          ['demo_2/2016-06/10/13-37-45.953_mkngff/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350.zarr/OME/', 'METADATA.ome.xml', 'application/octet-stream']
+          ['demo_2/2016-06/10/13-37-45.953_mkngff/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350.zarr/', '.zattrs', 'application/octet-stream', 'https://uk1s3.embassy.ebi.ac.uk/bia-integrator-data/S-BIAD861/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350.zarr/.zattrs'],
+          ['demo_2/2016-06/10/13-37-45.953_mkngff/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350.zarr/', '.zgroup', 'application/octet-stream', 'https://uk1s3.embassy.ebi.ac.uk/bia-integrator-data/S-BIAD861/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350.zarr/.zgroup'],
+          ['demo_2/2016-06/10/13-37-45.953_mkngff/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350.zarr/OME/', '.zattrs', 'application/octet-stream', 'https://uk1s3.embassy.ebi.ac.uk/bia-integrator-data/S-BIAD861/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350.zarr/OME/.zattrs'],
+          ['demo_2/2016-06/10/13-37-45.953_mkngff/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350.zarr/OME/', '.zgroup', 'application/octet-stream', 'https://uk1s3.embassy.ebi.ac.uk/bia-integrator-data/S-BIAD861/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350.zarr/OME/.zgroup'],
+          ['demo_2/2016-06/10/13-37-45.953_mkngff/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350.zarr/OME/', 'METADATA.ome.xml', 'application/octet-stream', 'https://uk1s3.embassy.ebi.ac.uk/bia-integrator-data/S-BIAD861/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350/90ef79de-8222-4b6d-aa4e-d4f1bd2f1350.zarr/OME/METADATA.ome.xml']
       ]::text[][]
     );
 commit;
