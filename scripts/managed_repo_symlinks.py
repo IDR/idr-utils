@@ -13,7 +13,7 @@ def create_symlinks(conn, fileset_id, fileset_dirs, args):
     """ fileset_dirs is dict of 'filset_dir.zarr': 's3_dir_name.zarr' """
 
     fileset = conn.getQueryService().get("Fileset", fileset_id, conn.SERVICE_OPTS)
-    template_path = os.path.join(args.repo, fileset.templatePrefix.val, "ngff", "idr0125")
+    template_path = os.path.join(args.repo, fileset.templatePrefix.val)
 
     if args.report:
         print("\nFileset:", fileset.id.val, template_path)
