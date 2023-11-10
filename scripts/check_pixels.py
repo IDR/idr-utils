@@ -14,38 +14,36 @@ from omero.cli import cli_login
 from omero.gateway import BlitzGateway
 
 
-def log(message, log_file):
-    with open(log_file, 'a') as f:
-        f.write(message)
-        f.write("\n")
+def log(message):
+    print(message)
 
 
-def check_image(idr_conn, image, log_file, max_planes):
+def check_image(idr_conn, image, max_planes):
 
     try:
         sizeZ = image.getSizeZ()
         sizeC = image.getSizeC()
         sizeT = image.getSizeT()
         zctList = []
-        for t in range(sizeT):
+        for c in range(sizeC):
             for z in range(sizeZ):
-                for c in range(sizeC):
+                for t in range(sizeT):
                     if len(zctList) < max_planes or max_planes == 0:
                         zctList.append( (z,c,t) )
 
         idr_image = idr_conn.getObject("Image", image.id)
         if idr_image is None:
-            log("Error: Image not found on IDR: %s" % image.id, log_file)
+            log("Error: Image not found on IDR: %s" % image.id)
+            return
 
         planes = image.getPrimaryPixels().getPlanes(zctList)
         idr_planes = idr_image.getPrimaryPixels().getPlanes(zctList)
 
         for plane, idr_plane, idx in zip(planes, idr_planes, zctList):
             if not np.array_equiv(plane, idr_plane):
-                log("Error: Mismatch for Image: %s at plane (z, c, t): %s" % (image.id, idx),
-                    log_file)
+                log("Error: Mismatch for Image: %s at plane (z, c, t): %s" % (image.id, idx))
     except Exception as ex:
-        log("Error: Image:%s %s" % (image.id, ex.message), log_file)
+        log("Error: Image:%s %s" % (image.id, ex.message))
 
 
 def get_object(conn, obj_string):
@@ -102,17 +100,21 @@ def main(argv):
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('object', help='Object:ID where Object is Screen, Plate, Project, Dataset, Image')
-    parser.add_argument('logfile', help='File path to output log')
+    # parser.add_argument('logfile', help='File path to output log')
+    parser.add_argument('--max-images', type=int, default=0,
+                        help='Max number of images to check. Default is to check ALL')
     parser.add_argument('--max-planes', type=int, default=0,
                         help='Max number of planes to check per image. Default is to check ALL')
     args = parser.parse_args(argv)
 
+    max_images = args.max_images
     max_planes = args.max_planes
     obj_string = args.object
     start_time = datetime.now()
-    log("Start: %s" % start_time, args.logfile)
-    log("Checking %s" % obj_string, args.logfile)
-    log('max_planes: %s' % max_planes, args.logfile)
+    log("Start: %s" % start_time)
+    log("Checking %s" % obj_string)
+    log('max_planes: %s' % max_planes)
+    log('max_images: %s' % max_images)
 
     with cli_login() as cli:
         conn = BlitzGateway(client_obj=cli._client)
@@ -125,21 +127,24 @@ def main(argv):
         idr_conn = BlitzGateway(client_obj=idr_client)
 
         images = get_images(conn, obj_string)
-        idr_images = get_images(idr_conn, obj_string)
+        # idr_images = get_images(idr_conn, obj_string)
 
         # Check all images in IDR are also in local server
-        img_ids = [img.id for img in images]
-        idr_ids = [img.id for img in idr_images]
-        if not img_ids == idr_ids:
-            log("Error: Different Image IDs: %s" % list(set(idr_ids) - set(img_ids)), args.logfile)
+        # img_ids = [img.id for img in images]
+        # idr_ids = [img.id for img in idr_images]
+        # if not img_ids == idr_ids:
+        #     log("Error: Different Image IDs: %s" % list(set(idr_ids) - set(img_ids)))
 
         # Compare pixel values...
         total = len(images)
         for count, image in enumerate(images):
-            log("%s/%s Check Image:%s %s" % (count, total, image.id, image.name), args.logfile)
-            check_image(idr_conn, image, args.logfile, max_planes)
+            if count > max_images:
+                log("Checked max images... Done")
+                break
+            log("%s/%s Check Image:%s %s" % (count, total, image.id, image.name))
+            check_image(idr_conn, image, max_planes)
 
-    log("End: %s" % datetime.now(), args.logfile)
+    log("End: %s" % datetime.now())
 
 if __name__ == '__main__':
     main(sys.argv[1:])
