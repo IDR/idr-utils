@@ -56,24 +56,26 @@ def get_object(conn, obj_string):
             return obj
 
 
-def get_plate_images(plate):
+def get_plate_images(plate, max_images):
     images = []
     for well in plate.listChildren():
         for ws in well.listChildren():
             images.append(ws.getImage())
+            if max_images and len(images) >= max_images:
+                return images
     return images
             
 
-def get_images(conn, obj_string):
+def get_images(conn, obj_string, max_images=0):
     obj = get_object(conn, obj_string)
 
     images = []
     if obj_string.startswith("Screen"):
         for plate in obj.listChildren():
-            images.extend(get_plate_images(plate))
+            images.extend(get_plate_images(plate, max_images))
 
     elif obj_string.startswith("Plate"):
-        images.extend(get_plate_images(obj))
+        images.extend(get_plate_images(obj, max_images))
 
     elif obj_string.startswith("Project"):
         for dataset in obj.listChildren():
@@ -102,7 +104,7 @@ def main(argv):
     parser.add_argument('object', help='Object:ID where Object is Screen, Plate, Project, Dataset, Image')
     # parser.add_argument('logfile', help='File path to output log')
     parser.add_argument('--max-images', type=int, default=0,
-                        help='Max number of images to check. Default is to check ALL')
+                        help='Max number of images per FILESET. Default is to check ALL')
     parser.add_argument('--max-planes', type=int, default=0,
                         help='Max number of planes to check per image. Default is to check ALL')
     args = parser.parse_args(argv)
@@ -126,21 +128,18 @@ def main(argv):
         idr_client.createSession('public', 'public')
         idr_conn = BlitzGateway(client_obj=idr_client)
 
-        images = get_images(conn, obj_string)
-        # idr_images = get_images(idr_conn, obj_string)
+        images = get_images(conn, obj_string, max_images)
+        idr_images = get_images(idr_conn, obj_string)
 
         # Check all images in IDR are also in local server
-        # img_ids = [img.id for img in images]
-        # idr_ids = [img.id for img in idr_images]
-        # if not img_ids == idr_ids:
-        #     log("Error: Different Image IDs: %s" % list(set(idr_ids) - set(img_ids)))
+        img_ids = [img.id for img in images]
+        idr_ids = [img.id for img in idr_images]
+        if not img_ids == idr_ids:
+            log("Error: Different Image IDs: %s" % list(set(idr_ids) - set(img_ids)))
 
         # Compare pixel values...
         total = len(images)
         for count, image in enumerate(images):
-            if count > max_images:
-                log("Checked max images... Done")
-                break
             log("%s/%s Check Image:%s %s" % (count, total, image.id, image.name))
             check_image(idr_conn, image, max_planes)
 
