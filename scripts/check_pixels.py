@@ -129,7 +129,7 @@ def main(argv):
         idr_conn = BlitzGateway(client_obj=idr_client)
 
         images = get_images(conn, obj_string, max_images)
-        idr_images = get_images(idr_conn, obj_string)
+        idr_images = get_images(idr_conn, obj_string, max_images)
 
         # Check all images in IDR are also in local server
         img_ids = [img.id for img in images]
