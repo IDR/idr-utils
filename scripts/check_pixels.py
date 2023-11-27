@@ -24,11 +24,19 @@ def check_image(idr_conn, image, max_planes):
         sizeZ = image.getSizeZ()
         sizeC = image.getSizeC()
         sizeT = image.getSizeT()
+        if max_planes is not None:
+            # 'sizeC' or number
+            if max_planes == "sizeC":
+                max_planes = sizeC
+            else:
+                max_planes = int(max_planes)
+
         zctList = []
-        for c in range(sizeC):
-            for z in range(sizeZ):
-                for t in range(sizeT):
-                    if len(zctList) < max_planes or max_planes == 0:
+        # if max_planes == sizeC, we'll get 1 plane from each Channel
+        for z in range(sizeZ):
+            for t in range(sizeT):
+                for c in range(sizeC):
+                    if max_planes is None or len(zctList) < max_planes:
                         zctList.append( (z,c,t) )
 
         idr_image = idr_conn.getObject("Image", image.id)
@@ -105,8 +113,8 @@ def main(argv):
     # parser.add_argument('logfile', help='File path to output log')
     parser.add_argument('--max-images', type=int, default=0,
                         help='Max number of images per FILESET. Default is to check ALL')
-    parser.add_argument('--max-planes', type=int, default=0,
-                        help='Max number of planes to check per image. Default is to check ALL')
+    parser.add_argument('--max-planes',
+                        help='Max number of planes to check per image or sizeC to check 1 from each Channel. Default is to check ALL')
     args = parser.parse_args(argv)
 
     max_images = args.max_images
