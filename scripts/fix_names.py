@@ -16,6 +16,7 @@ parser.add_argument("pat", help="The pattern how to replace the name (needs a na
 parser.add_argument("file3", nargs="?", help="Optional output file (default: stout)")
 parser.add_argument('-y', action="store_true", default=False, help="Don't ask, assume yes for all "
                                                                    "suggested replacements")
+parser.add_argument('-m', default=20, type=int, help="Maximum difference (1-100, default: 20)")
 parser.add_argument("-v", "--verbose", action="count", default=0,
                     help="Verbosity (-v, -vv, etc)")
 
@@ -59,12 +60,14 @@ def extract_names(file, pat, group_name):
     return res
 
 
-def get_best_match(name, suggestions):
+def get_best_match(name, suggestions, max_dist):
     """
     Returns the best match (lowest Levenshtein distance) for name out
     of the list/set of suggestions
     :param name: The name to find the best match for
     :param suggestions: A list/set of suggestions
+    :param max_dist: Return None if the best match is more than max_dist (%)
+                     different
     :return: See above
     """
     best = None
@@ -75,6 +78,9 @@ def get_best_match(name, suggestions):
             best_distance = dist
             best = suggestion
 
+    rel_best_dist = best_distance * 100 / len(name)
+    if rel_best_dist > max_dist:
+        return None
     return best
 
 
@@ -106,17 +112,24 @@ def fix(file, pat, group_name, replacements, out_file):
                     logging.debug(f"{i}: No replacement for '{old_name}' found.")
 
 
-def get_replacements(names, suggestions, approve_all=False):
+def get_replacements(names, suggestions, max_dist, approve_all=False):
     """
     Suggest replacements, ask user for confirmation
     :param names: The names which potentially need replacing
     :param suggestions: List/set of suggested correct names
+    :param max_dist: Only replace names with strings which are <= max_dist(%) different
     :param approve_all: If true, don't ask user
     :return: A dictionary of replacements
     """
     replacements = dict()
     for name in names:
-        best_match = get_best_match(name, suggestions)
+        best_match = get_best_match(name, suggestions, max_dist)
+        if not best_match:
+            logging.info(f"No replacement found for '{name}'")
+            continue
+        if best_match == name:
+            logging.debug(f"'{name}' is already best match.")
+            continue
         if approve_all:
             replacements[name] = best_match
             logging.info(f"Replace '{name}' with '{best_match}'")
@@ -129,7 +142,7 @@ def get_replacements(names, suggestions, approve_all=False):
 
 names = extract_names(args.file2, args.pat, "name")
 correct_names = read_file(args.file1)
-replacements = get_replacements(names, correct_names, approve_all=args.y)
+replacements = get_replacements(names, correct_names, args.m, approve_all=args.y)
 
 if args.file3:
     with open(args.file3, mode="w") as outfile:
