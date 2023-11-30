@@ -16,7 +16,7 @@ parser.add_argument("pat", help="The pattern how to replace the name (needs a na
 parser.add_argument("file3", nargs="?", help="Optional output file (default: stout)")
 parser.add_argument('-y', action="store_true", default=False, help="Don't ask, assume yes for all "
                                                                    "suggested replacements")
-parser.add_argument('-m', default=20, type=int, help="Maximum difference (1-100, default: 20)")
+parser.add_argument('-m', default=50, type=int, help="Maximum difference (1-100, default: 50)")
 parser.add_argument("-v", "--verbose", action="count", default=0,
                     help="Verbosity (-v, -vv, etc)")
 
@@ -99,17 +99,18 @@ def fix(file, pat, group_name, replacements, out_file):
         for i, line in enumerate(infile.readlines()):
             line = line.strip()
             m = pat.match(line)
+            to_print = line
             if m:
                 old_name = m.group(group_name)
                 if old_name in replacements:
-                    res = line.replace(old_name, replacements[old_name])
+                    to_print = line.replace(old_name, replacements[old_name])
                     logging.debug(f"{i},{m.start()}-{m.end()}: '{old_name}' -> '{replacements[old_name]}'")
-                    if out_file:
-                        out_file.write(f"{res}\n")
-                    else:
-                        print(res)
                 else:
                     logging.debug(f"{i}: No replacement for '{old_name}' found.")
+            if out_file:
+                out_file.write(f"{to_print}\n")
+            else:
+                print(to_print)
 
 
 def get_replacements(names, suggestions, max_dist, approve_all=False):
