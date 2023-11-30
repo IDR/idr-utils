@@ -35,7 +35,8 @@ def read_file(file):
     with open(file, "r") as infile:
         for line in infile.readlines():
             line = line.strip()
-            res.add(line)
+            if not line.startswith("#"):
+                res.add(line)
     return res
 
 
@@ -53,7 +54,7 @@ def extract_names(file, pat, group_name):
         for line in infile.readlines():
             line = line.strip()
             m = pat.match(line)
-            if m:
+            if m and not line.startswith("#"):
                 res.add(m.group(group_name))
     res = list(res)
     res.sort()
@@ -100,7 +101,7 @@ def fix(file, pat, group_name, replacements, out_file):
             line = line.strip()
             m = pat.match(line)
             to_print = line
-            if m:
+            if m and not line.startswith("#"):
                 old_name = m.group(group_name)
                 if old_name in replacements:
                     to_print = line.replace(old_name, replacements[old_name])
