@@ -1,7 +1,7 @@
 # !/bin/bash
-# Submit a SLURM job to transfer data from NFS bioimage onto the public storage area
+# Submit a SLURM job to transfer data from NFS bioimage onto the public data services
 #
-# Usage: ./transfer.sh <folder>
+# Usage: ./transfer_to_public.sh <folder>
 #
 # <folder> should be an existing subfolder of /nfs/ebi/bioimage/drop/
 #
@@ -9,10 +9,10 @@
 # the idr-virtual user. 
 #
 # In most cases, this script can be used for an entire IDR study e.g.
-# ./transfer.sh idr0088-cox-phenomicprofiling
+# ./transfer_to_public.sh idr0088-cox-phenomicprofiling
 #
 # For larger studies, the script also supports partial transfer of subfolders e.g.
-# ./transfer.sh idr0043-uhlen-humanproteinatlas/20181112-ftp
+# ./transfer_to_public.sh idr0043-uhlen-humanproteinatlas/20181112-ftp
 #
 # The data is first copied in parallel using mpirun  then the permissions are
 # adjusted recursively for all files and folders. The stdout and stderr will
