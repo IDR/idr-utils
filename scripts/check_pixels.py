@@ -49,9 +49,9 @@ def check_image(idr_conn, image, max_planes):
 
         for plane, idr_plane, idx in zip(planes, idr_planes, zctList):
             if not np.array_equiv(plane, idr_plane):
-                log("Error: Mismatch for Image: %s at plane (z, c, t): %s" % (image.id, idx))
+                log("Error: Mismatch for Image:%s %s at plane (z, c, t): %s" % (image.id, image.name, idx))
     except Exception as ex:
-        log("Error: Image:%s %s" % (image.id, ex))
+        log("Error: Image:%s %s %s" % (image.id, image.name, ex))
 
 
 def get_object(conn, obj_string):
