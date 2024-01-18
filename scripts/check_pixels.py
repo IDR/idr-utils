@@ -53,7 +53,7 @@ def check_image(idr_conn, image, max_planes, check_timing=False):
         planes_time_idr = datetime.now() - start_idr
 
         if check_timing:
-            ratio = planes_time_local.microseconds / planes_time_idr.microseconds
+            ratio = planes_time_local / planes_time_idr
             log("Ratio of local/IDR timing for %s planes is %s Image: %s" % (len(zctList), ratio, image.id))
             log("Local took %s, IDR took %s" % (planes_time_local, planes_time_idr))
 
