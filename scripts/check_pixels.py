@@ -18,7 +18,7 @@ def log(message):
     print(message)
 
 
-def check_image(idr_conn, image, max_planes):
+def check_image(idr_conn, image, max_planes, check_timing=False):
 
     try:
         sizeZ = image.getSizeZ()
@@ -44,8 +44,18 @@ def check_image(idr_conn, image, max_planes):
             log("Error: Image not found on IDR: %s" % image.id)
             return
 
-        planes = image.getPrimaryPixels().getPlanes(zctList)
-        idr_planes = idr_image.getPrimaryPixels().getPlanes(zctList)
+        start_local = datetime.now()
+        planes = list(image.getPrimaryPixels().getPlanes(zctList))
+        planes_time_local = datetime.now() - start_local
+
+        start_idr = datetime.now()
+        idr_planes = list(idr_image.getPrimaryPixels().getPlanes(zctList))
+        planes_time_idr = datetime.now() - start_idr
+
+        if check_timing:
+            ratio = planes_time_local.microseconds / planes_time_idr.microseconds
+            log("Ratio of local/IDR timing for %s planes is %s Image: %s" % (len(zctList), ratio, image.id))
+            log("Local took %s, IDR took %s" % (planes_time_local, planes_time_idr))
 
         for plane, idr_plane, idx in zip(planes, idr_planes, zctList):
             if not np.array_equiv(plane, idr_plane):
@@ -115,6 +125,7 @@ def main(argv):
                         help='Max number of images per FILESET. Default is to check ALL')
     parser.add_argument('--max-planes',
                         help='Max number of planes to check per image or sizeC to check 1 from each Channel. Default is to check ALL')
+    parser.add_argument('--timing', action="store_true", help="print timing difference between local and IDR")
     args = parser.parse_args(argv)
 
     max_images = args.max_images
@@ -125,6 +136,7 @@ def main(argv):
     log("Checking %s" % obj_string)
     log('max_planes: %s' % max_planes)
     log('max_images: %s' % max_images)
+    log('check timing: %s' % args.timing)
 
     with cli_login() as cli:
         conn = BlitzGateway(client_obj=cli._client)
@@ -149,7 +161,7 @@ def main(argv):
         total = len(images)
         for count, image in enumerate(images):
             log("%s/%s Check Image:%s %s" % (count, total, image.id, image.name))
-            check_image(idr_conn, image, max_planes)
+            check_image(idr_conn, image, max_planes, check_timing=args.timing)
 
     log("End: %s" % datetime.now())
 
