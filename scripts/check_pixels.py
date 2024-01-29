@@ -39,14 +39,18 @@ def check_image(idr_conn, image, max_planes, check_timing=False):
                     if max_planes is None or len(zctList) < max_planes:
                         zctList.append( (z,c,t) )
 
+        start_local = datetime.now()
+        planes = list(image.getPrimaryPixels().getPlanes(zctList))
+        planes_time_local = datetime.now() - start_local
+
+        if idr_conn is None:
+            # We're not comparing with IDR, and we've done getting Planes...
+            return
+
         idr_image = idr_conn.getObject("Image", image.id)
         if idr_image is None:
             log("Error: Image not found on IDR: %s" % image.id)
             return
-
-        start_local = datetime.now()
-        planes = list(image.getPrimaryPixels().getPlanes(zctList))
-        planes_time_local = datetime.now() - start_local
 
         start_idr = datetime.now()
         idr_planes = list(idr_image.getPrimaryPixels().getPlanes(zctList))
@@ -121,6 +125,8 @@ def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('object', help='Object:ID where Object is Screen, Plate, Project, Dataset, Image')
     # parser.add_argument('logfile', help='File path to output log')
+    parser.add_argument('--no-check', action="store_true",
+                        help="If True, don't check against another server - use for perf testing")
     parser.add_argument('--max-images', type=int, default=0,
                         help='Max number of images per FILESET. Default is to check ALL')
     parser.add_argument('--max-planes',
@@ -142,20 +148,26 @@ def main(argv):
         conn = BlitzGateway(client_obj=cli._client)
         assert ":" in obj_string
 
+        images = get_images(conn, obj_string, max_images)
+
         # Create connection to IDR server
         # NB: conn.connect() not working on IDR. Do it like this
-        idr_client = omero.client(host="idr.openmicroscopy.org", port=4064)
-        idr_client.createSession('public', 'public')
-        idr_conn = BlitzGateway(client_obj=idr_client)
+        if args.no_check:
+            log("no_check - Don't connect to idr")
+            idr_conn = None
+        else:
+            log('connecting to idr.openmicroscopy.org')
+            idr_client = omero.client(host="idr.openmicroscopy.org", port=4064)
+            idr_client.createSession('public', 'public')
+            idr_conn = BlitzGateway(client_obj=idr_client)
 
-        images = get_images(conn, obj_string, max_images)
-        idr_images = get_images(idr_conn, obj_string, max_images)
+            idr_images = get_images(idr_conn, obj_string, max_images)
 
-        # Check all images in IDR are also in local server
-        img_ids = [img.id for img in images]
-        idr_ids = [img.id for img in idr_images]
-        if not img_ids == idr_ids:
-            log("Error: Different Image IDs: %s" % list(set(idr_ids) - set(img_ids)))
+            # Check all images in IDR are also in local server
+            img_ids = [img.id for img in images]
+            idr_ids = [img.id for img in idr_images]
+            if not img_ids == idr_ids:
+                log("Error: Different Image IDs: %s" % list(set(idr_ids) - set(img_ids)))
 
         # Compare pixel values...
         total = len(images)
