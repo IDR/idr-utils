@@ -184,6 +184,7 @@ def main(argv):
                     image.renderJpeg()
                 except Exception as ex:
                     log("Error: RenderJpeg Image:%s %s %s" % (image.id, image.name, ex))
+                    raise ex
             else:
                 check_image(idr_conn, image, max_planes, check_timing=args.timing)
 
