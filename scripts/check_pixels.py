@@ -125,6 +125,8 @@ def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('object', help='Object:ID where Object is Screen, Plate, Project, Dataset, Image')
     # parser.add_argument('logfile', help='File path to output log')
+    parser.add_argument('--render', action="store_true",
+                        help="Use image.renderJpeg() instead of getPlane(). This also includes --no-check")
     parser.add_argument('--no-check', action="store_true",
                         help="If True, don't check against another server - use for perf testing")
     parser.add_argument('--max-images', type=int, default=0,
@@ -137,6 +139,10 @@ def main(argv):
     max_images = args.max_images
     max_planes = args.max_planes
     obj_string = args.object
+    no_check = args.no_check
+    render_image = args.render
+    if render_image:
+        no_check = True
     start_time = datetime.now()
     log("Start: %s" % start_time)
     log("Checking %s" % obj_string)
@@ -152,7 +158,7 @@ def main(argv):
 
         # Create connection to IDR server
         # NB: conn.connect() not working on IDR. Do it like this
-        if args.no_check:
+        if no_check:
             log("no_check - Don't connect to idr")
             idr_conn = None
         else:
@@ -172,8 +178,14 @@ def main(argv):
         # Compare pixel values...
         total = len(images)
         for count, image in enumerate(images):
-            log("%s/%s Check Image:%s %s" % (count, total, image.id, image.name))
-            check_image(idr_conn, image, max_planes, check_timing=args.timing)
+            log("%s/%s %s Image:%s %s" % (count, total, ("Render" if render_image else "Check"), image.id, image.name))
+            if render_image:
+                try:
+                    image.renderJpeg()
+                except Exception as ex:
+                    log("Error: RenderJpeg Image:%s %s %s" % (image.id, image.name, ex))
+            else:
+                check_image(idr_conn, image, max_planes, check_timing=args.timing)
 
     log("End: %s" % datetime.now())
 
