@@ -69,6 +69,7 @@ KEYS = (
     Key('Experiment Description', 'Experiment'),
     Key('Experiment Sample Type', 'Experiment'),
     Key('Experiment Imaging Method', 'Experiment'),
+    Key('Experiment Imaging Method Term Accession', 'Experiment'),
     Key('Experiment Number', 'Experiment'),
     # OPTIONAL_KEYS["Experiment"]
     Key('Experiment Data DOI', 'Experiment', optional=True),
@@ -81,6 +82,7 @@ KEYS = (
     Key('Screen Description', 'Screen'),
     Key('Screen Sample Type', 'Screen'),
     Key('Screen Imaging Method', 'Screen'),
+    Key('Screen Imaging Method Term Accession', 'Screen'),
     Key('Screen Number', 'Screen'),
     Key('Screen Type', 'Screen'),
     # OPTIONAL_KEYS["Screen"]
@@ -330,13 +332,15 @@ class Formatter(object):
     ]
     EXPERIMENT_TECHNOLOGY_PAIRS = [
         ('Study Type', "%(Study Type)s"),
-        ('Imaging Method', "%(Experiment Imaging Method)s"),
+        ('Imaging Method', "%(Experiment Imaging Method)s "
+         "http://purl.obolibrary.org/obo/%(Experiment Imaging Method Term Accession)s"),
     ]
     SCREEN_TECHNOLOGY_PAIRS = [
         ('Study Type', "%(Study Type)s"),
         ('Screen Type', "%(Screen Type)s"),
         ('Screen Technology Type', "%(Screen Technology Type)s"),
-        ('Imaging Method', "%(Screen Imaging Method)s"),
+        ('Imaging Method', "%(Screen Imaging Method)s "
+         "http://purl.obolibrary.org/obo/%(Screen Imaging Method Term Accession)s"),
     ]
     PUBLICATION_PAIRS = [
         ('Publication Title', "%(Title)s"),
