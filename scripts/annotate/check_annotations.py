@@ -138,7 +138,7 @@ if projectId:
             key = "{},{}".format(ds.getName(), img.getName())
             if csv_keys:
                 if key not in csv_keys:
-                    df = df.append({
+                    df = df._append({
                         "Dataset Name": ds.getName(),
                         "Image Name": img.getName(),
                         "Errors": "Missing annotation"},
