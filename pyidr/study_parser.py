@@ -405,25 +405,18 @@ class Formatter(object):
 
     def generate_description(self, component):
         """Generate the description of the study/experiment/screen"""
-        publication_title = ""
-        if component["Study Publication Title"]:
-            # Only display the first publication
-            publication_title = (
-                "Publication Title\n%(Study Publication Title)s" %
-                component).split('\t')[0] + "\n\n"
         if "Type" in component:
             key = "%s Description" % component["Type"]
         else:
             key = "Study Description"
-        component_title = (
-            "%s\n%s" % (key, component[key]))
+        component_title = component[key]
         if "Study Version History" in component:
             history = ("\n\nVersion History\n%s" %
                        component["Study Version History"])
         else:
             history = ""
 
-        return publication_title + component_title + history
+        return component_title + history
 
     def generate_annotation(self, component):
         """Generate the map annotation of the study/experiment/screen"""
