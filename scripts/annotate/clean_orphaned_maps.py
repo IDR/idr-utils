@@ -16,7 +16,9 @@ IMAGE_MAPS = {
     "Phenotype": "openmicroscopy.org/mapr/phenotype",
     "siRNA": "openmicroscopy.org/mapr/sirna",
     "Compound": "openmicroscopy.org/mapr/compound",
-    "Protein": "openmicroscopy.org/mapr/protein"
+    "Protein": "openmicroscopy.org/mapr/protein",
+    "ORF": "openmicroscopy.org/mapr/orf",
+    "OMAP": "openmicroscopy.org/mapr/OMAP"
     }
 
 CONTAINER_MAPS = {
