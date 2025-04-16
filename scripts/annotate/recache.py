@@ -8,11 +8,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 URL = "<BASE_URL>/webclient/api/annotations/?type=map&parents=true&<TYPE>=<ID>"
 
 
-def request(base_url, obj, is_well):
-    if is_well:
-        url = URL.replace("<BASE_URL>", base_url).replace("<TYPE>", "well").replace("<ID>",str(obj.getId()))
-    else:
-        url = URL.replace("<BASE_URL>", base_url).replace("<TYPE>", "image").replace("<ID>",str(obj.getId()))
+def request(base_url, obj, kind):
+    url = URL.replace("<BASE_URL>", base_url).replace("<TYPE>", kind).replace("<ID>",str(obj.getId()))
     r = requests.get(url)
     try:
         r.json()
@@ -23,24 +20,28 @@ def request(base_url, obj, is_well):
 
 def get_objects(conn, container):
     """
-    Returns a list of images and wells to process.
-    Each item is a tuple of (image|well, is_well).
+    Returns a list of objects (image, well, dataset, 
+    project, screen,or plate) to process.
+    Each item is a tuple of (obj, kind).
     """
     m = re.compile(r"(?P<con_type>Screen|Project):(?P<con_id>\d+)").match(container)
     if not m:
         raise ValueError("Invalid container: %s" % container)
     container = conn.getObject(m.group("con_type"), attributes={"id": m.group("con_id")})
     res = []
+    res.append((container, m.group("con_type").lower()))
     if m.group("con_type") == "Project":
         for dataset in container.listChildren():
+            res.append((dataset, "dataset"))
             for image in dataset.listChildren():
-                res.append((image, False))
+                res.append((image, "image"))
     elif m.group("con_type") == "Screen":
         for plate in container.listChildren():
+            res.append((plate, "plate"))
             for well in plate.listChildren():
-                res.append((well, True))
+                res.append((well, "well"))
                 for ws in well.listChildren():
-                    res.append((ws.getImage(), False))
+                    res.append((ws.getImage(), "image"))
     else:
         raise ValueError("Invalid container type: %s" % m.group("con_type"))
     return res
@@ -58,8 +59,8 @@ with omero.cli.cli_login() as c:
 
     with ThreadPoolExecutor() as executor:
         futures = [
-            executor.submit(request, args.base_url, obj, is_well)
-            for obj, is_well in objs
+            executor.submit(request, args.base_url, obj, kind)
+            for obj, kind in objs
         ]
         for future in as_completed(futures):
             try:
