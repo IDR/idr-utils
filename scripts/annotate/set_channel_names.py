@@ -7,7 +7,8 @@ from omero.gateway import BlitzGateway
 
 
 DESC = '''
-Set the channel names provided by the annotation.csv.
+Set the channel names for all images of a Project/Screen 
+according to the "Channels" column in the annotation.csv.
 '''
 
 
@@ -61,18 +62,22 @@ def read_csv(args):
             if key in channels:
                 fail(f"Duplicate entry in csv file: {row['Dataset Name']}, {row['Image Name']}")
             channel_str = row[args.column]
-            channels[key] = channel_str.split(args.separator)
+            channels[key] = [c.strip() for c in channel_str.split(args.separator)]
     elif args.screenId:
         for index, row in df.iterrows():
             key = f"{row['Plate']}|{row['Well']}"
             if key in channels:
                 fail(f"Duplicate entry in csv file: {row['Plate']}, {row['Well']}")
             channel_str = row[args.column]
-            channels[key] = channel_str.split(args.separator)
+            channels[key] = [c.strip() for c in channel_str.split(args.separator)]
     return channels
 
 
-def get_image(conn, args):
+def get_targets(conn, args):
+    """
+    Generator that retrieves all images as (dataset, image) pairs
+    or all wells as (plate, well) pairs.
+    """
     if args.projectId:
         project = conn.getObject("Project", args.projectId)
         if not project:
@@ -90,37 +95,40 @@ def get_image(conn, args):
                     yield pl, well
 
 
-def set_channel_name(img, channel_name, channel_index, dryrun):
-    channels = img.getChannels(noRE=True)
-    lc = channels[channel_index].getLogicalChannel()
-    if not dryrun:
-        lc.setName(channel_name)
-        lc.save()
-
-
 def main():
     args = get_args()
     channels = read_csv(args)
     with cli_login() as c:
         conn = BlitzGateway(client_obj=c.get_client())
-        for container, img in get_image(conn, args):
+        for container, obj in get_targets(conn, args):
+            imgs = []
             if args.projectId:
-                key = f"{container.getName()}|{img.getName()}"
+                # obj is an image
+                key = f"{container.getName()}|{obj.getName()}"
+                imgs.append(obj)
             else:
-                # img is a wellsample in that case
-                key = f"{container.getName()}|{img.getWellPos()}"
-                img = img.getImage()
+                # obj is a well
+                key = f"{container.getName()}|{obj.getWellPos()}"
+                for ws in obj.listChildren():
+                    imgs.append(ws.getImage())
             if key not in channels:
-                logging.warning(f"No channel names found for image {key}.")
+                logging.warning(f"No channel names found for {key}.")
                 continue
-            img_channels = channels[key]
-            if len(img_channels) != len(img.getChannels(noRE=True)):
-                logging.warning(f"Skipping {key}. Number of image channels ({len(img.getChannels(noRE=True))}) \
-                                does not match the number of channel names {len(img_channels)}")
-                continue
-            for i, channel_name in enumerate(img_channels):
-                logging.info(f"Setting channel {i} of {key} to {channel_name}")
-                set_channel_name(img, channel_name, i, args.dryrun)
+            csv_channels = channels[key]
+            for img in imgs:
+                img_channels = img.getChannels(noRE=True)
+                if len(csv_channels) != len(img_channels):
+                    logging.warning(f"Skipping {key}. Number of image channels ({len(img_channels)}) \
+                                    does not match the number of channel names {len(csv_channels)}")
+                    continue
+                for i, channel_name in enumerate(csv_channels):
+                    lc = img_channels[i].getLogicalChannel()
+                    if not args.dryrun:
+                        logging.info(f"Setting channel {i} of {key} (Image:{img.getId()}) to {channel_name}")
+                        lc.setName(channel_name)
+                        lc.save()
+                    else: 
+                        logging.info(f"Setting channel {i} of {key} (Image:{img.getId()}) to {channel_name} -- dryrun")
 
 
 if __name__ == "__main__":
