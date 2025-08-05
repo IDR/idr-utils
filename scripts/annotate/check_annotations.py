@@ -75,7 +75,7 @@ def report_problems():
         logging.error(reason)
         elements = sorted(problems[reason], key=itemgetter(0, 1))
         for element in elements:
-            logging.info("{},{}".format(element[0], element[1]))
+            logging.error("{},{}".format(element[0], element[1]))
 
 
 def check_annotations(anns):
@@ -193,7 +193,7 @@ if csv_keys:
                     " match any images:")
     for key in sorted(csv_keys):
         df.loc[csv_keys[key], "Errors"] = "No image"
-        logging.info("{},No image".format(key))
+        logging.warning("{},No image".format(key))
 
 if args.output:
     if args.skip_ok:
