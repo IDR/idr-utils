@@ -1,0 +1,8 @@
+# Test data for fix_names.py script
+Dataset,Image,Organism,Something_else
+Dataset A,Image A,Homo sapiens,blah
+Dataset A,Image B,homo sapiens,blah
+Dataset A,Image C,homo sepiens,blah
+Dataset B,Image D,H sapiens,blah
+Dataset B,Image E,Caenorhabditis elegans,blah
+Dataset C,Image F,Canorhabditis elegans,blah
