@@ -138,10 +138,10 @@ if projectId:
             key = "{},{}".format(ds.getName(), img.getName())
             if csv_keys:
                 if key not in csv_keys:
-                    df = df._append({
+                    df = pandas.concat([df, pandas.DataFrame([{
                         "Dataset Name": ds.getName(),
                         "Image Name": img.getName(),
-                        "Errors": "Missing annotation"},
+                        "Errors": "Missing annotation"}])],
                         ignore_index=True)
                     flag_error(ds.getName(), img.getName(),
                                "Missing annotation in csv file ")
@@ -167,10 +167,10 @@ elif screenId:
                 key = "{},{}".format(pl.getName(), well.getWellPos())
                 if csv_keys:
                     if key not in csv_keys:
-                        df = df.append({
+                        df = pandas.concat([df, pandas.DataFrame([{
                             "Plate": pl.getName(),
                             "Well": well.getWellPos(),
-                            "Errors": "Missing annotation"},
+                            "Errors": "Missing annotation"}])],
                             ignore_index=True)
                         flag_error(pl.getName(), well.getWellPos(),
                                    "Missing annotation in csv file")
