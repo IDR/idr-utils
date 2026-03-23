@@ -29,7 +29,7 @@ def request(base_url, obj, kind, thumbs=False):
     return f"{url} -> {r.status_code}"
 
 
-def get_objects(conn, container, img_only=False):
+def get_objects(conn, container):
     """
     Returns a list of objects (image, well, dataset, 
     project, screen,or plate) to process.
@@ -40,21 +40,17 @@ def get_objects(conn, container, img_only=False):
         raise ValueError("Invalid container: %s" % container)
     container = conn.getObject(m.group("con_type"), attributes={"id": m.group("con_id")})
     res = []
-    if not img_only:
-        res.append((container, m.group("con_type").lower()))
+    res.append((container, m.group("con_type").lower()))
     if m.group("con_type") == "Project":
         for dataset in container.listChildren():
-            if not img_only:
-                res.append((dataset, "dataset"))
+            res.append((dataset, "dataset"))
             for image in dataset.listChildren():
                 res.append((image, "image"))
     elif m.group("con_type") == "Screen":
         for plate in container.listChildren():
-            if not img_only:
-                res.append((plate, "plate"))
+            res.append((plate, "plate"))
             for well in plate.listChildren():
-                if not img_only:
-                    res.append((well, "well"))
+                res.append((well, "well"))
                 for ws in well.listChildren():
                     res.append((ws.getImage(), "image"))
     else:
@@ -84,11 +80,11 @@ with omero.cli.cli_login() as c:
                 print(f"Error processing object: {e}")
     
     if args.thumbs:
-        objs = get_objects(conn, args.container, img_only=True)
+        objs = [obj for obj, kind in objs if kind == "image"]
         with ThreadPoolExecutor() as executor:
             futures = [
-                executor.submit(request, args.base_url, obj, kind, thumbs=True)
-                for obj, kind in objs
+                executor.submit(request, args.base_url, obj, "image", thumbs=True)
+                for obj in objs
             ]
             for future in as_completed(futures):
                 try:
