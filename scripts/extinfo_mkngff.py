@@ -5,6 +5,7 @@ to reference the zarr URL. This only works for the "mkngff" images, because thei
 """
 
 import sys
+import argparse
 import requests
 
 from omero.cli import cli_login
@@ -68,7 +69,7 @@ def get_filepaths_info(img, plate_name=None):
     return base
 
 
-def set_ext_info(conn, img, path):
+def set_ext_info(conn, img, path, skip_if_set=False):
     """Set external info metadata on an OMERO image.
     
     Creates or updates the external info to reference NGFF multiscales data.
@@ -77,10 +78,14 @@ def set_ext_info(conn, img, path):
         conn: OMERO BlitzGateway connection
         img: OMERO image object
         path: Path to the NGFF multiscales data
+        skip_if_set: If True, skip setting external info if it already exists
     """
     img = conn.getObject('Image', img.getId())
     extinfo = img.getExternalInfo()
-    if extinfo is None:
+    if extinfo:
+        if skip_if_set:
+            return
+    else:
         extinfo = ExternalInfoI()
     extinfo.entityId = rlong(3)
     extinfo.entityType = rstring("com.glencoesoftware.ngff:multiscales")
@@ -92,33 +97,65 @@ def set_ext_info(conn, img, path):
 
 
 def check(path):
-    """Verify that an NGFF path is valid by checking for .zattrs file.
+    """Verify that an NGFF path is valid by checking for multiscales in .zattrs file.
     
     Args:
         path: Path to check for NGFF data
         
     Returns:
-        bool: True if .zattrs file exists and is accessible, False otherwise
+        str or None: The valid path if multiscales exists, None otherwise
     """
+    
+    if not path.startswith(("http://", "https://")):
+        return None
+
+    # None bioformats layout or plate image
     response = requests.get(f"{path}/.zattrs")
-    return response.status_code == 200
+    if response.status_code == 200:
+        try:
+            data = response.json()
+            if "multiscales" in data:
+                return path
+        except (ValueError, KeyError):
+            pass
+    
+    # Bioformats layout ('0' series)
+    response = requests.get(f"{path}/0/.zattrs")
+    if response.status_code == 200:
+        try:
+            data = response.json()
+            if "multiscales" in data:
+                return f"{path}/0"
+        except (ValueError, KeyError):
+            pass
+    
+    return None
 
 
 def main(argv=None):
-    """Main entry point for the script.
+    parser = argparse.ArgumentParser(
+        description="Process Projects or Screens and set external info metadata on images to reference zarr URLs.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="Example: %(prog)s Project:123\n         %(prog)s Screen:456"
+    )
+    parser.add_argument(
+        "container",
+        help="Container specification in format <Type>:<ID> (e.g., Project:123 or Screen:456)"
+    )
+    parser.add_argument(
+        "--skip-if-set",
+        action="store_true",
+        help="Skip setting external info if it already exists"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print info without setting external info (ignores --skip-if-set)"
+    )
     
-    Processes an OMERO container (Project or Screen) and sets external info
-    on all images to reference their NGFF multiscales data.
+    args = parser.parse_args(argv)
     
-    Args:
-        argv: Command line arguments. Expects format: <Container>:<ID>
-              e.g., "Project:123" or "Screen:456"
-    """
-    argv = argv or sys.argv[1:]
-    if len(argv) != 1:
-        raise SystemExit(f"Usage: {sys.argv[0]} <Container>:<ID>  # e.g. Project:123")
-
-    container, container_id = argv[0].split(":")
+    container, container_id = args.container.split(":")
     container_id = int(container_id)
     is_screen = container.lower() == "screen"
     with cli_login() as c:
@@ -129,14 +166,16 @@ def main(argv=None):
                 path = f"{path}/{pos}"
             else:
                 path = get_filepaths_info(img)
-                path = f"{path}/0"
-            if check(path):
-                set_ext_info(conn, img, path)
-                print(f"Set extinfo for image {img.getName()}({img.getId()}) to {path}")
+            checked_path = check(path)
+            if checked_path:
+                if args.dry_run:
+                    print(f"[DRY RUN] Would set extinfo for image {img.getName()}({img.getId()}) to {checked_path}")
+                else:
+                    set_ext_info(conn, img, checked_path, skip_if_set=args.skip_if_set)
+                    print(f"Set extinfo for image {img.getName()}({img.getId()}) to {checked_path}")
             else:
                 print(f"Could not resolve {path} for image {img.getName()}({img.getId()})")
 
 
 if __name__ == "__main__":
     main()
-
