@@ -4,9 +4,17 @@ import argparse
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+"""
+Recache annotations and thumbnails for a container (project or screen).
+
+Usage:
+    ssh idr-next -L 9000:localhost:9000 -L 4064:omeroreaadwrite:4064
+    python recache.py --thumbs Project:123
+"""
 
 URL = "<BASE_URL>/webclient/api/annotations/?type=map&parents=true&<TYPE>=<ID>"
 THUMBS_URL = "<BASE_URL>/webclient/get_thumbnails/?id=<IMAGE_ID>"
+
 
 def request(base_url, obj, kind, thumbs=False):
     if thumbs:
@@ -59,7 +67,7 @@ with omero.cli.cli_login() as c:
 
     parser = argparse.ArgumentParser(description="Recache annotations")
     parser.add_argument("container", help="Container to process (Project or Screen) (e.g. Project:123)")
-    parser.add_argument("--base-url", default="http://localhost:1080", help="Base URL (default: http://localhost:1080)")
+    parser.add_argument("--base-url", default="http://localhost:9000", help="Base URL (default: http://localhost:9000)")
     parser.add_argument("--thumbs", action="store_true", help="Also recache thumbnails")
     args = parser.parse_args()
 
