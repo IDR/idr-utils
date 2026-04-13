@@ -4,12 +4,23 @@ import argparse
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+"""
+Recache annotations and thumbnails for a container (project or screen).
+
+Usage:
+    ssh idr-next -L 9000:localhost:9000 -L 4064:omeroreaadwrite:4064
+    python recache.py --thumbs Project:123
+"""
 
 URL = "<BASE_URL>/webclient/api/annotations/?type=map&parents=true&<TYPE>=<ID>"
+THUMBS_URL = "<BASE_URL>/webclient/get_thumbnails/?id=<IMAGE_ID>"
 
 
-def request(base_url, obj, kind):
-    url = URL.replace("<BASE_URL>", base_url).replace("<TYPE>", kind).replace("<ID>",str(obj.getId()))
+def request(base_url, obj, kind, thumbs=False):
+    if thumbs:
+        url = THUMBS_URL.replace("<BASE_URL>", base_url).replace("<IMAGE_ID>", str(obj.getId()))
+    else:
+        url = URL.replace("<BASE_URL>", base_url).replace("<TYPE>", kind).replace("<ID>",str(obj.getId()))
     r = requests.get(url)
     try:
         r.json()
@@ -52,11 +63,11 @@ with omero.cli.cli_login() as c:
 
     parser = argparse.ArgumentParser(description="Recache annotations")
     parser.add_argument("container", help="Container to process (Project or Screen) (e.g. Project:123)")
-    parser.add_argument("--base-url", default="http://localhost:1080", help="Base URL (default: http://localhost:1080)")
+    parser.add_argument("--base-url", default="http://localhost:9000", help="Base URL (default: http://localhost:9000)")
+    parser.add_argument("--thumbs", action="store_true", help="Also recache thumbnails")
     args = parser.parse_args()
 
     objs = get_objects(conn, args.container)
-
     with ThreadPoolExecutor() as executor:
         futures = [
             executor.submit(request, args.base_url, obj, kind)
@@ -67,3 +78,16 @@ with omero.cli.cli_login() as c:
                 print(future.result())
             except Exception as e:
                 print(f"Error processing object: {e}")
+    
+    if args.thumbs:
+        objs = [obj for obj, kind in objs if kind == "image"]
+        with ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(request, args.base_url, obj, "image", thumbs=True)
+                for obj in objs
+            ]
+            for future in as_completed(futures):
+                try:
+                    print(future.result())
+                except Exception as e:
+                    print(f"Error processing object: {e}")
