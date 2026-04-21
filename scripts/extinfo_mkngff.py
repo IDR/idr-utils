@@ -12,7 +12,9 @@ from omero.cli import cli_login
 from omero.gateway import BlitzGateway
 from omero.model import ExternalInfoI
 from omero.rtypes import rstring, rlong
+from urllib.parse import urlsplit
 
+AWS_DEFAULT_ENDPOINT = "s3.us-east-1.amazonaws.com"
 
 plate_cache = dict()
 
@@ -132,6 +134,38 @@ def check(path):
     return None
 
 
+def http_to_s3(uri: str) -> str:
+    """
+    Convert http/https URI to s3 URI
+    """
+    parsed_uri = urlsplit(uri)
+    endpoint = "https://" + f"{parsed_uri.netloc}"
+    path = f"{parsed_uri.path}"
+    scheme = f"{parsed_uri.scheme}"
+    if "http" not in scheme:
+        return uri
+    if path.startswith("/"):
+        path = path[1:]
+    uri = "s3://" + path
+    uri = format_s3_uri(uri, endpoint)
+    uri = uri + "?anonymous=true"
+    return uri
+
+
+def format_s3_uri(uri: str, endpoint: str) -> str:
+    """
+    Combine endpoint and uri
+    """
+    parsed_uri = urlsplit(uri)
+    url = f"{parsed_uri.netloc}"
+    if endpoint:
+        parsed_endpoint = urlsplit(endpoint)
+        endpoint = f"{parsed_endpoint.netloc}"
+    else:
+        endpoint = AWS_DEFAULT_ENDPOINT
+    return f"{parsed_uri.scheme}" + "://" + endpoint + "/" + url + f"{parsed_uri.path}"
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Process Projects or Screens and set external info metadata on images to reference zarr URLs.",
@@ -152,6 +186,12 @@ def main(argv=None):
         action="store_true",
         help="Print info without setting external info (ignores --skip-if-set)"
     )
+
+    parser.add_argument(
+        "--s3",
+        action="store_true",
+        help="Convert http/https URLs to s3 URLs"
+    )
     
     args = parser.parse_args(argv)
     
@@ -168,6 +208,8 @@ def main(argv=None):
                 path = get_filepaths_info(img)
             checked_path = check(path)
             if checked_path:
+                if args.s3:
+                    checked_path = http_to_s3(checked_path)
                 if args.dry_run:
                     print(f"[DRY RUN] Would set extinfo for image {img.getName()}({img.getId()}) to {checked_path}")
                 else:
