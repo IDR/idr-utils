@@ -149,6 +149,9 @@ def http_to_s3(uri: str) -> str:
     uri = "s3://" + path
     uri = format_s3_uri(uri, endpoint)
     uri = uri + "?anonymous=true"
+    uri = uri.replace("uk1s3.embassy.ebi.ac.uk", "livingobjects.ebi.ac.uk")
+    uri = uri.replace("bia-integrator-data", "bioimaging-integrator-data")
+    uri = uri.replace("bia-idr-integration", "bioimaging-idr-integration")
     return uri
 
 
