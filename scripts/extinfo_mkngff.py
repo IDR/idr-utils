@@ -6,7 +6,9 @@ to reference the zarr URL. This only works for the "mkngff" images, because thei
 
 import sys
 import argparse
+import threading
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from omero.cli import cli_login
 from omero.gateway import BlitzGateway
@@ -17,6 +19,7 @@ from urllib.parse import urlsplit
 AWS_DEFAULT_ENDPOINT = "s3.us-east-1.amazonaws.com"
 
 plate_cache = dict()
+plate_cache_lock = threading.Lock()
 
 
 def get_images(conn, container_id, is_screen=False):
@@ -28,10 +31,11 @@ def get_images(conn, container_id, is_screen=False):
         is_screen: If True, process as Screen; if False, process as Project
         
     Yields:
-        tuple: (parent_name, position, image) where:
+        tuple: (parent_name, position, image_id, image_name) where:
             - parent_name: plate name (for screens) or dataset name (for projects)
             - position: well position string like "A/123/0" (for screens) or "" (for projects)
-            - image: OMERO image object
+            - image_id: ID of the image
+            - image_name: name of the image
     """
     if is_screen:
         screen = conn.getObject('Screen', attributes={'id': container_id})
@@ -42,12 +46,13 @@ def get_images(conn, container_id, is_screen=False):
                 well_pos = f"{well_pos[0]}/{well_pos[1:]}"
                 for index in range(0, index):
                     pos = f"{well_pos}/{index}"
-                    yield plate.getName(), pos, well.getImage(index)
+                    img = well.getImage(index)
+                    yield plate.getName(), pos, img.getId(), img.getName()
     else:
         project = conn.getObject('Project', attributes={'id': container_id})
         for dataset in project.listChildren():
             for image in dataset.listChildren():
-                yield dataset.getName(), "", image
+                yield dataset.getName(), "", image.getId(), image.getName()
 
 
 def get_filepaths_info(img, plate_name=None):
@@ -62,12 +67,14 @@ def get_filepaths_info(img, plate_name=None):
     Returns:
         str: Base directory path of the imported image file
     """
-    if plate_name and plate_name in plate_cache:
-        return plate_cache[plate_name]
+    with plate_cache_lock:
+        if plate_name and plate_name in plate_cache:
+            return plate_cache[plate_name]
     path = img.getImportedImageFilePaths()["client_paths"][0]
     base, _ = path.rsplit("/", 1)
     if plate_name:
-        plate_cache[plate_name] = base
+        with plate_cache_lock:
+            plate_cache[plate_name] = base
     return base
 
 
@@ -196,30 +203,53 @@ def main(argv=None):
         help="Convert http/https URLs to s3 URLs"
     )
     
+    parser.add_argument(
+        "--threads",
+        type=int,
+        default=4,
+        help="Number of parallel threads/connections (default: 4)"
+    )
+
     args = parser.parse_args(argv)
     
     container, container_id = args.container.split(":")
     container_id = int(container_id)
     is_screen = container.lower() == "screen"
+
+    def process_image(item):
+        parent_name, pos, img_id, img_name = item
+        thread_conn = BlitzGateway(client_obj=cli_conn.get_client())
+        img = thread_conn.getObject('Image', img_id)
+        if is_screen:
+            path = get_filepaths_info(img, parent_name)
+            path = f"{path}/{pos}"
+        else:
+            path = get_filepaths_info(img)
+        checked_path = check(path)
+        if checked_path:
+            if args.s3:
+                checked_path = http_to_s3(checked_path)
+            if args.dry_run:
+                print(f"[DRY RUN] Would set extinfo for image {img_name}({img_id}) to {checked_path}")
+            else:
+                set_ext_info(thread_conn, img, checked_path, skip_if_set=args.skip_if_set)
+                print(f"Set extinfo for image {img_name}({img_id}) to {checked_path}")
+        else:
+            print(f"Could not resolve {path} for image {img_name}({img_id})")
+
     with cli_login() as c:
+        cli_conn = c
         conn = BlitzGateway(client_obj=c.get_client())
-        for parent_name, pos, img in get_images(conn, container_id, is_screen=is_screen):
-            if is_screen:
-                path = get_filepaths_info(img, parent_name)
-                path = f"{path}/{pos}"
-            else:
-                path = get_filepaths_info(img)
-            checked_path = check(path)
-            if checked_path:
-                if args.s3:
-                    checked_path = http_to_s3(checked_path)
-                if args.dry_run:
-                    print(f"[DRY RUN] Would set extinfo for image {img.getName()}({img.getId()}) to {checked_path}")
-                else:
-                    set_ext_info(conn, img, checked_path, skip_if_set=args.skip_if_set)
-                    print(f"Set extinfo for image {img.getName()}({img.getId()}) to {checked_path}")
-            else:
-                print(f"Could not resolve {path} for image {img.getName()}({img.getId()})")
+        with ThreadPoolExecutor(max_workers=args.threads) as executor:
+            futures = {
+                executor.submit(process_image, item): item
+                for item in get_images(conn, container_id, is_screen=is_screen)
+            }
+            for future in as_completed(futures):
+                exc = future.exception()
+                if exc:
+                    item = futures[future]
+                    print(f"Error processing image {item[3]}({item[2]}): {exc}")
 
 
 if __name__ == "__main__":
